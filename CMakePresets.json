@@ -1,0 +1,33 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "win",
+      "displayName": "Windows",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build"
+    },
+    {
+      "name": "unix",
+      "displayName": "Linux",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-21",
+        "CMAKE_CXX_COMPILER": "clang++-21",
+        "CMAKE_MAKE_PROGRAM": "make"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release",
+      "configurePreset": "win",
+      "configuration": "Release"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "win",
+      "configuration": "Debug"
+    }
+  ]
+}

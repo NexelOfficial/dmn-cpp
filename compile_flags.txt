@@ -1,0 +1,6 @@
+-std=c++23
+-DW32
+-DND64
+-Isrc
+-Iinclude
+-isystemthird_party/include

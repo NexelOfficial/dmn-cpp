@@ -1,0 +1,4 @@
+{
+  "paths": ["src/**/*.{cpp,hpp}", "include/**/*.hpp"],
+  "buildRoot": "build"
+}

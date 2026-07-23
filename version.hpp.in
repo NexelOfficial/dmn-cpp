@@ -1,0 +1,7 @@
+#pragma once
+#include <string_view>
+
+namespace versioninfo {
+    inline constexpr std::string_view message = "Version=@PROJECT_VERSION@.@PROJECT_COMMITS@, Hash=@PROJECT_HASH@";
+    inline constexpr std::string_view version = "@PROJECT_VERSION@.@PROJECT_COMMITS@";
+}

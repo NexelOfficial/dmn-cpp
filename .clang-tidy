@@ -1,0 +1,28 @@
+Checks:
+  - clang-diagnostic-*
+  - clang-analyzer-*
+  - modernize-*
+  - cppcoreguidelines-*
+  - readability-*
+  - performance-*
+  - bugprone-*
+  - misc-*
+  # Domino C-api and Lua have many c-style vararg functions
+  - -cppcoreguidelines-pro-type-vararg
+  # const_cast is required for certain Domino C-api conversions
+  - -cppcoreguidelines-pro-type-const-cast
+  # reinterpret_cast is required for many Domino C-api conversions
+  - -cppcoreguidelines-pro-type-reinterpret-cast
+  # Short identifiers are cleaner in certain contexts
+  - -readability-identifier-length
+  # Some members are ofter exposed intentionally
+  - -misc-non-private-member-variables-in-classes
+  # Clutters the include tree with headers
+  - -misc-include-cleaner
+  # Recursion is intentional for certain features (like DQL)
+  - -misc-no-recursion
+
+CheckOptions:
+  modernize-use-trailing-return-type.TransformLambdas: none
+
+WarningsAsErrors: "*"
