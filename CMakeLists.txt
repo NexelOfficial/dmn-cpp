@@ -90,12 +90,18 @@ elseif(UNIX AND NOT APPLE)
     )
   endif()
 
+  find_library(
+    NOTES_LIBRARY
+    NAMES notes libnotes.so
+    HINTS "$ENV{Notes_ExecDirectory}"
+    NO_DEFAULT_PATH
+    REQUIRED
+  )
+
   add_library(notes::notes SHARED IMPORTED)
 
   set_target_properties(notes::notes PROPERTIES
-    IMPORTED_LOCATION
-      "$ENV{Notes_ExecDirectory}/libnotes.a"
-
+    IMPORTED_LOCATION "${NOTES_LIBRARY}"
     INTERFACE_INCLUDE_DIRECTORIES
       "${CMAKE_CURRENT_SOURCE_DIR}/third_party/include"
   )
