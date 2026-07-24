@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <array>
 #include <string>
@@ -34,7 +35,11 @@ struct oid {
 };
 
 struct note_id {
+  #ifdef W32
   using value_t = unsigned long;
+  #else
+  using value_t = unsigned int;
+  #endif
 
   value_t value;
 

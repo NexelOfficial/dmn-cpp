@@ -7,6 +7,7 @@
 
 #include "dmn/misc/error.hpp"
 #include "dmn/os/uhandle.hpp"
+#include "dmn/os/lmbcs.hpp"
 #include "dmn/os/locker.hpp"
 
 using dmn::acl::names;

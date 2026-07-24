@@ -104,8 +104,8 @@ auto view::collect_entries(void* position_ptr, uint32_t count, uint32_t skip_cou
   uint16_t signal = SIGNAL_MORE_TO_DO;
   while ((signal & SIGNAL_MORE_TO_DO) != 0) {
     dmn::dhandle_t entries_handle{};
-    DWORD entries_length = NULL;
-    uint16_t memory_len = NULL;
+    DWORD entries_length = 0;
+    uint16_t memory_len = 0;
 
     const dmn::status result = NIFReadEntries(
       get_handle(), static_cast<COLLECTIONPOSITION*>(position_ptr), NAVIGATE_NEXT, skip_count,

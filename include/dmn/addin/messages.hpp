@@ -10,7 +10,11 @@ class addin;
 
 class messages {
  public:
+#ifdef W32
   using handle_t = unsigned long;
+#else
+  using handle_t = unsigned int;
+#endif
 
   /// Open a named message queue.
   ///
