@@ -3,3 +3,4 @@ third_party
 vcpkg_installed
 bin
 run-clang-tidy.exe
+_CPack_Packages

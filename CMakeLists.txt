@@ -1,51 +1,117 @@
 cmake_minimum_required(VERSION 3.20)
-project(dmn VERSION 1.0.0 LANGUAGES CXX)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+if(POLICY CMP0091)
+  cmake_policy(SET CMP0091 NEW)
+endif()
+
+project(
+  dmn
+  VERSION 1.0.0
+  LANGUAGES CXX
+)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-if(MSVC)
-  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-  set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT /Zi")
-  add_compile_options("/utf-8")
-endif()
+option(DMN_BUILD_SHARED "Build dmn as a shared library" OFF)
 
-if(WIN32)
-  add_compile_definitions(W32 ND64 _WIN32_WINNT=0x0A00)
-elseif(UNIX)
-  add_compile_definitions(UNIX LINUX LINUX64)
-endif()
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-file(GLOB_RECURSE ALL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
-add_library(dmn ${ALL_SOURCES})
+file(
+  GLOB_RECURSE DMN_SOURCES
+  CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+)
+
+if(DMN_BUILD_SHARED)
+  add_library(dmn SHARED ${DMN_SOURCES})
+else()
+  add_library(dmn STATIC ${DMN_SOURCES})
+endif()
 
 add_library(dmn::dmn ALIAS dmn)
 
 target_compile_features(dmn PUBLIC cxx_std_23)
 
-target_link_libraries(dmn
-  PRIVATE
-  $<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_SOURCE_DIR}/third_party/lib/notes.lib>
-  $<$<PLATFORM_ID:Linux>:$ENV{Notes_ExecDirectory}/libnotes.so>
-)
-
-set_target_properties(dmn PROPERTIES
-  VERSION ${PROJECT_VERSION}
-  SOVERSION ${PROJECT_VERSION_MAJOR}
-  EXPORT_NAME "dmn"
-)
-
 target_include_directories(dmn
   PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-target_include_directories(dmn SYSTEM PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/include
+if(MSVC)
+  set_property(
+    TARGET dmn
+    PROPERTY MSVC_RUNTIME_LIBRARY
+      "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+  )
+
+  target_compile_options(
+    dmn
+    PRIVATE
+      /utf-8
+      /Zi
+  )
+
+  target_link_options(
+    dmn
+    PRIVATE
+      $<$<CONFIG:Release>:/DEBUG>
+  )
+endif()
+
+if(WIN32)
+  target_compile_definitions(
+    dmn
+    PRIVATE
+      W32
+      ND64
+      _WIN32_WINNT=0x0A00
+  )
+
+  add_library(notes::notes STATIC IMPORTED)
+
+  set_target_properties(notes::notes PROPERTIES
+    IMPORTED_LOCATION
+      "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lib/notes.lib"
+
+    INTERFACE_INCLUDE_DIRECTORIES
+      "${CMAKE_CURRENT_SOURCE_DIR}/third_party/include"
+  )
+elseif(UNIX AND NOT APPLE)
+  target_compile_definitions(
+    dmn
+    PRIVATE
+      UNIX
+      LINUX
+      LINUX64
+  )
+
+  if(NOT DEFINED ENV{Notes_ExecDirectory})
+    message(FATAL_ERROR
+      "Notes_ExecDirectory must point to the Notes installation"
+    )
+  endif()
+
+  add_library(notes::notes SHARED IMPORTED)
+
+  set_target_properties(notes::notes PROPERTIES
+    IMPORTED_LOCATION
+      "$ENV{Notes_ExecDirectory}/libnotes.a"
+
+    INTERFACE_INCLUDE_DIRECTORIES
+      "${CMAKE_CURRENT_SOURCE_DIR}/third_party/include"
+  )
+endif()
+
+target_link_libraries(dmn PRIVATE notes::notes)
+
+set_target_properties(
+  dmn
+  PROPERTIES
+    VERSION "${PROJECT_VERSION}"
+    SOVERSION "${PROJECT_VERSION_MAJOR}"
+    EXPORT_NAME dmn
 )
 
 install(
@@ -54,11 +120,10 @@ install(
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+  DIRECTORY include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
@@ -83,7 +148,28 @@ write_basic_package_version_file(
 
 install(
   FILES
-  "${CMAKE_CURRENT_BINARY_DIR}/dmnConfig.cmake"
-  "${CMAKE_CURRENT_BINARY_DIR}/dmnConfigVersion.cmake"
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/dmn"
+    "${CMAKE_CURRENT_BINARY_DIR}/dmnConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/dmnConfigVersion.cmake"
+  DESTINATION
+    "${CMAKE_INSTALL_LIBDIR}/cmake/dmn"
 )
+
+set(CPACK_PACKAGE_NAME "dmn")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_FILE_NAME
+  "dmn-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
+)
+set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY ON)
+
+if(WIN32)
+  set(CPACK_GENERATOR ZIP)
+else()
+  set(CPACK_GENERATOR TGZ)
+endif()
+
+set(
+  CPACK_PACKAGE_DIRECTORY
+  "${CMAKE_BINARY_DIR}/packages"
+)
+
+include(CPack)
