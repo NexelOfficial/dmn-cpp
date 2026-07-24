@@ -48,15 +48,15 @@ class addin {
 
   /// Log a message to the server console.
   ///
-  /// Concatenates the supplied arguments into a single message, prefixes the
-  /// output with the add-in name, and writes the resulting text to the server log.
+  /// Concatenates the supplied arguments into a single message, and writes the resulting text to
+  /// the server log.
   ///
   /// \param args Values to append to the log message.
   template <typename... Args>
   static void log(Args&&... args) noexcept {
     try {
       std::stringstream ss{};
-      ss << "Domiflows: ";
+      ss << prefix_.value_or("");
       // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
       ((ss << std::forward<Args>(args)), ...);
       log_impl(ss.str());
@@ -65,8 +65,14 @@ class addin {
     }
   }
 
+  /// Add a custom prefix that will be added before all logs.
+  ///
+  /// \param prefix Prefix to apply.
+  static void set_log_prefix(std::string_view prefix);
+
  private:
   static std::mutex mtx;
+  static inline std::optional<std::string> prefix_;
 
   dmn::uhandle<dmn::dhandle_t> status_hdl_;
 

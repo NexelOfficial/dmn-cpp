@@ -75,6 +75,8 @@ void addin::enter_loop(const function_t& callback) const {
   dmn::addin::log("Add-in loop stopped.");
 }
 
+void addin::set_log_prefix(std::string_view prefix) { prefix_.emplace(prefix); }
+
 void addin::log_impl(const std::string& text) {
   // Escape percent signs
   std::string escaped;
