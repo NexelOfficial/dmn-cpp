@@ -13,8 +13,6 @@ project(
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-option(DMN_BUILD_SHARED "Build dmn as a shared library" OFF)
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 file(
@@ -23,12 +21,7 @@ file(
   "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
 
-if(DMN_BUILD_SHARED)
-  add_library(dmn SHARED ${DMN_SOURCES})
-else()
-  add_library(dmn STATIC ${DMN_SOURCES})
-endif()
-
+add_library(dmn SHARED ${DMN_SOURCES})
 add_library(dmn::dmn ALIAS dmn)
 
 target_compile_features(dmn PUBLIC cxx_std_23)
@@ -77,6 +70,10 @@ if(WIN32)
 
     INTERFACE_INCLUDE_DIRECTORIES
       "${CMAKE_CURRENT_SOURCE_DIR}/third_party/include"
+  )
+
+  set_target_properties(dmn PROPERTIES
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
   )
 elseif(UNIX AND NOT APPLE)
   target_compile_definitions(
