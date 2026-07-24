@@ -11,6 +11,36 @@ memory blocks are represented with project types such as `dmn::dhandle_t` and
 `dmn::os::block_id`, and higher-level classes own, lock, unlock, and release
 resources for you.
 
+## Quickstart
+
+Add `dmn-cpp` as a custom vcpkg registry in your `vcpkg-configuration.json`:
+
+```json
+{
+  "registries": [
+    {
+      "kind": "git",
+      "repository": "https://github.com/NexelOfficial/vcpkg-registry.git",
+      "baseline": "<baseline>",
+      "packages": ["dmn"]
+    }
+  ]
+}
+```
+
+Replace `<baseline>` with the commit hash listed in the relevant registry release. You can find the current baseline on the [latest release page](https://github.com/NexelOfficial/dmn-cpp/releases/latest). Make sure to also add [the default registry](https://learn.microsoft.com/en-us/vcpkg/reference/vcpkg-json#builtin-baseline) if you haven't configured it yet.
+
+Then add `dmn` as a port in your `vcpkg.json`:
+
+```json
+{
+  "dependencies": [
+    "dmn"
+  ]
+}
+
+```
+
 ## Building
 
 Requirements:
