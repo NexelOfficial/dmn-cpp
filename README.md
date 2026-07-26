@@ -47,6 +47,7 @@ Requirements:
 
 - CMake 3.20 or newer.
 - A C++23 compiler.
+- vcpkg available through `VCPKG_ROOT`.
 - HCL Domino/Notes runtime libraries and headers.
 
 On Windows, the build expects Domino headers and `notes.lib` under
@@ -65,6 +66,19 @@ so CMake can locate `libnotes.so`.
 export Notes_ExecDirectory=/opt/hcl/domino/notes/latest/linux
 cmake --preset unix
 cmake --build build
+```
+
+## Testing
+
+`CMakeLists.txt` enables `CTest` and adds the `tests/` subdirectory when
+`BUILD_TESTING` is on. After configuring and building, run the test suite from
+the generated build tree:
+
+```sh
+# Windows
+ctest --test-dir build -C Release --output-on-failure
+# Linux
+ctest --test-dir build --output-on-failure
 ```
 
 ## Packaging With CPack

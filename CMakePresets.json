@@ -5,7 +5,10 @@
       "name": "win",
       "displayName": "Windows",
       "architecture": "x64",
-      "binaryDir": "${sourceDir}/build"
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      }
     },
     {
       "name": "unix",
@@ -14,7 +17,8 @@
       "cacheVariables": {
         "CMAKE_C_COMPILER": "clang-21",
         "CMAKE_CXX_COMPILER": "clang++-21",
-        "CMAKE_MAKE_PROGRAM": "make"
+        "CMAKE_MAKE_PROGRAM": "make",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
       }
     }
   ],
@@ -23,11 +27,6 @@
       "name": "release",
       "configurePreset": "win",
       "configuration": "Release"
-    },
-    {
-      "name": "debug",
-      "configurePreset": "win",
-      "configuration": "Debug"
     }
   ]
 }

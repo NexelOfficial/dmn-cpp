@@ -1,0 +1,220 @@
+#include <catch2/catch_test_macros.hpp>
+
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <optional>
+#include <regex>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
+
+#include "dmn/misc/unid.hpp"
+#include "dmn/nos/list.hpp"
+#include "dmn/nsf/database.hpp"
+#include "dmn/nos/object.hpp"
+#include "dmn/nsf/note.hpp"
+
+namespace fs = std::filesystem;
+
+namespace {
+struct note_guard {
+  std::optional<dmn::note> value;
+
+  note_guard() = default;
+  note_guard(dmn::note note) : value(std::move(note)) {}
+
+  note_guard(const note_guard&) = delete;
+  auto operator=(const note_guard&) = delete;
+  note_guard(note_guard&&) = delete;
+  auto operator=(note_guard&&) = delete;
+
+  ~note_guard() {
+    if (!value) {
+      return;
+    }
+
+    try {
+      value->remove(true);
+    } catch (...) {
+    }
+    value.reset();
+  }
+
+  auto operator*() -> dmn::note& { return *value; }
+  auto operator*() const -> const dmn::note& { return *value; }
+  auto operator->() -> dmn::note* { return &*value; }
+  auto operator->() const -> const dmn::note* { return &*value; }
+
+  void release() noexcept { value.reset(); }
+};
+
+auto get_item_value(const dmn::database& db, dmn::note_id nid) -> std::optional<dmn::object> {
+  auto note = db.get_note(nid);
+  if (!note) {
+    throw std::runtime_error("Failed to open note for item value");
+  }
+
+  return note->get_item_value<dmn::object>("Subject");
+};
+
+auto open_example_database() -> dmn::database {
+  auto db = dmn::database::open("Example.nsf");
+  if (!db) {
+    throw std::runtime_error("Failed to open Example.nsf");
+  }
+  return *db;
+}
+
+auto create_temp_attachment() -> fs::path {
+  const auto path = fs::temp_directory_path() / "workflow_addin_note_test_attachment.txt";
+  std::ofstream out(path, std::ios::binary | std::ios::trunc);
+  if (!out.is_open()) {
+    throw std::runtime_error("Failed to create temporary attachment file");
+  }
+  out << "Attachment payload\nLine two\n";
+  out.flush();
+  return path;
+}
+}  // namespace
+
+TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
+  auto db = open_example_database();
+  REQUIRE(db.get_path().find("Example.nsf") != std::string::npos);
+  REQUIRE(db.try_get_handle().has_value());
+
+  note_guard primary{db.create_note()};
+  REQUIRE(primary->get_noteid().value != 0);
+  REQUIRE(primary->try_get_handle().has_value());
+  REQUIRE(primary->get_database().get_path().find("Example.nsf") != std::string::npos);
+
+  const auto original_noteid = primary->get_noteid();
+  const auto original_unid = primary->get_universalid();
+  REQUIRE(original_unid.size() == 32);
+  const auto parsed_unid = dmn::unid::from_string(original_unid);
+  REQUIRE(parsed_unid.has_value());
+  REQUIRE(parsed_unid->to_string() == original_unid);
+
+  const std::string subject = "Subject with emoji 🐶";
+  const std::string multiline = "Line 1\nLine 2\r\nLine 3 with punctuation !@#$%^&*()";
+  const std::string empty_text = "";
+  const std::string replacement_subject = "Updated subject";
+  const std::string weird_field_name = "Weird_Field_01";
+  const std::string attachment_name = "workflow_addin_test.txt";
+  const auto attachment_path = create_temp_attachment();
+
+  primary->replace_item_value("Subject", subject);
+  primary->append_item_value("EmptyText", empty_text);
+  primary->append_item_value("MultilineText", multiline);
+  primary->append_item_value("NumericValue", 42.5);
+  primary->append_item_value("ZeroValue", 0.0);
+  primary->append_item_value("OneValue", 1.0);
+
+  dmn::list tags{};
+  tags.push_back("alpha");
+  tags.push_back("beta");
+  tags.push_back("gamma");
+  primary->append_item_value("Tags", tags);
+  primary->append_item_value(weird_field_name, std::string{"value"});
+
+  REQUIRE_THROWS_AS(primary->compute_with_form(), dmn::error);
+  REQUIRE_NOTHROW(primary->embed_element(attachment_name, attachment_path.string()));
+  REQUIRE_NOTHROW(primary->embed_element(attachment_path.string()));
+  REQUIRE_NOTHROW(primary->save(true));
+
+  REQUIRE(primary->has_item("Subject"));
+  REQUIRE(primary->has_item("EmptyText"));
+  REQUIRE(primary->has_item("MultilineText"));
+  REQUIRE(primary->has_item("NumericValue"));
+  REQUIRE(primary->has_item("Tags"));
+  REQUIRE_FALSE(primary->has_item("MissingField"));
+
+  const auto numeric_text_value = primary->get_item_value<std::string>("NumericValue");
+  const auto numeric_value = primary->get_item_value<double>("NumericValue");
+  const auto numeric_int_value = primary->get_item_value<int>("NumericValue");
+  const auto one_bool_value = primary->get_item_value<bool>("OneValue");
+  const auto zero_bool_value = primary->get_item_value<bool>("ZeroValue");
+  const auto tags_value = primary->get_item_value<dmn::list>("Tags");
+  const auto raw_numeric_value = primary->get_item_value<dmn::object>("NumericValue");
+
+  REQUIRE_FALSE(numeric_text_value.has_value());
+  REQUIRE(numeric_value.has_value());
+  REQUIRE(numeric_value.value() == 42.5);
+  REQUIRE(numeric_int_value.has_value());
+  REQUIRE(numeric_int_value.value() == 42);
+  REQUIRE(one_bool_value.has_value());
+  REQUIRE(one_bool_value.value());
+  REQUIRE(zero_bool_value.has_value());
+  REQUIRE_FALSE(zero_bool_value.value());
+  REQUIRE(tags_value.has_value());
+  REQUIRE(tags_value.value().size() == 3);
+  REQUIRE(raw_numeric_value.has_value());
+  REQUIRE(raw_numeric_value->try_as<double>().value() == 42.5);
+
+  const auto subject_item_value = get_item_value(db, primary->get_noteid());
+  REQUIRE(subject_item_value.has_value());
+  REQUIRE(subject_item_value->is<std::string>());
+  REQUIRE_FALSE(subject_item_value->empty());
+
+  const auto subject_value = subject_item_value->try_as<std::string>();
+  REQUIRE(subject_value.has_value());
+  REQUIRE(subject_value.value() == subject);
+
+  const auto all_items = primary->items(std::nullopt);
+  REQUIRE(all_items.contains("Subject"));
+  REQUIRE(all_items.contains("NumericValue"));
+  REQUIRE(all_items.contains("Tags"));
+  REQUIRE(all_items.contains(weird_field_name));
+  REQUIRE(all_items.at("Subject").is<std::string>());
+  REQUIRE(all_items.at("NumericValue").is<double>());
+  REQUIRE(all_items.at("Tags").is<dmn::list>());
+
+  const auto filtered_items = primary->items(std::regex{R"(^.*Value$)"});
+  REQUIRE(filtered_items.contains("NumericValue"));
+  REQUIRE(filtered_items.contains("ZeroValue"));
+  REQUIRE(filtered_items.contains("OneValue"));
+  REQUIRE_FALSE(filtered_items.contains("Subject"));
+  REQUIRE_FALSE(filtered_items.contains("Tags"));
+
+  primary->replace_item_value("Subject", replacement_subject);
+  REQUIRE(primary->get_item_value<std::string>("Subject").value() == replacement_subject);
+
+  primary->remove_item("EmptyText");
+  REQUIRE_FALSE(primary->has_item("EmptyText"));
+  REQUIRE(primary->get_item_value<std::string>("EmptyText") == std::nullopt);
+
+  REQUIRE_NOTHROW(primary->save(true));
+
+  auto reopened_by_id = db.get_note(original_noteid);
+  REQUIRE(reopened_by_id.has_value());
+  REQUIRE(reopened_by_id->get_noteid() == original_noteid);
+  REQUIRE(reopened_by_id->get_universalid() == original_unid);
+  const auto reopened_subject = reopened_by_id->get_item_value<std::string>("Subject");
+  REQUIRE(reopened_subject.has_value());
+  REQUIRE(reopened_subject.value() == replacement_subject);
+
+  auto reopened_by_unid = db.get_note(original_unid);
+  REQUIRE(reopened_by_unid.has_value());
+  REQUIRE(reopened_by_unid->get_noteid() == original_noteid);
+  const auto reopened_numeric = reopened_by_unid->get_item_value<double>("NumericValue");
+  REQUIRE(reopened_numeric.has_value());
+  REQUIRE(reopened_numeric.value() == 42.5);
+
+  auto copied = primary->copy_to_database(db);
+  REQUIRE(copied.has_value());
+  note_guard copy{std::move(*copied)};
+  REQUIRE_FALSE(copy->get_noteid() == primary->get_noteid());
+  const auto copied_subject = copy->get_item_value<std::string>("Subject");
+  const auto copied_tags = copy->get_item_value<dmn::list>("Tags");
+  REQUIRE(copied_subject.has_value());
+  REQUIRE(copied_subject.value() == replacement_subject);
+  REQUIRE(copied_tags.has_value());
+  REQUIRE(copied_tags.value().size() == 3);
+
+  REQUIRE_NOTHROW(primary->remove(true));
+  primary.release();
+  REQUIRE_FALSE(db.get_note(original_noteid).has_value());
+  std::error_code ignore_ec;
+  fs::remove(attachment_path, ignore_ec);
+}

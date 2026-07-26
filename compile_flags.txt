@@ -4,3 +4,5 @@
 -Isrc
 -Iinclude
 -isystemthird_party/include
+-isystembuild/vcpkg_installed/x64-windows/include
+-isystembuild/vcpkg_installed/x64-linux/include
