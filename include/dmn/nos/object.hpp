@@ -32,8 +32,14 @@ class object {
   /// \param owner Instance that owns the raw memory.
   /// \note Text lists must be type-prefixed which means view entries aren't supported.
   template <typename T>
-  object(dmn::os::block_id bid, size_t size, std::shared_ptr<T> owner)
-      : bid_(bid), size_(size), owner_(std::static_pointer_cast<void>(std::move(owner))) {}
+  object(
+    dmn::os::block_id bid, size_t size, std::shared_ptr<T> owner,
+    std::optional<dmn::os::block_id> item_bid = std::nullopt
+  )
+      : bid_(bid),
+        size_(size),
+        owner_(std::static_pointer_cast<void>(std::move(owner))),
+        item_bid_(item_bid) {}
 
   /// Check whether the object is empty.
   ///
@@ -50,6 +56,15 @@ class object {
     dmn::os::locker obj(bid_, size_, dmn::os::ownership::borrow);
     return obj.read<dmn::type>();
   }
+
+  /// Write data to the memory behind the object.
+  ///
+  /// \param typ Type of the data.
+  /// \param data Data buffer to write.
+  /// \throws std::runtime_error If the object is not an item value.
+  /// \throws dmn::error If the reallocation failed.
+  /// \note Writing data is not possible when the object does not belong to an item value.
+  void write(dmn::type typ, std::span<uint8_t> data);
 
   /// Check whether the object can be converted to a type.
   template <typename T>
@@ -148,6 +163,7 @@ class object {
   [[nodiscard]] auto as_string() const -> std::optional<std::string>;
 
  private:
+  std::optional<dmn::os::block_id> item_bid_ = std::nullopt;
   std::shared_ptr<void> owner_;
   dmn::os::block_id bid_{};
   size_t size_{};

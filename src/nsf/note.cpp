@@ -10,7 +10,6 @@
 
 #include "dmn/misc/error.hpp"
 #include "dmn/misc/unid.hpp"
-#include "dmn/nos/list.hpp"
 #include "dmn/nos/object.hpp"
 #include "dmn/os/locker.hpp"
 
@@ -260,13 +259,13 @@ auto note::get_universalid() const -> std::string {
 }
 
 auto note::get_item_value_impl(const lmbcs::str& key) const -> std::optional<dmn::object> {
+  dmn::os::block_id item_bid{};
+  uint16_t item_type = 0;
   dmn::os::block_id value_bid{};
   DWORD value_len = 0;
-  BLOCKID item_bid;
-  uint16_t item_type = 0;
 
   const dmn::status result = NSFItemInfo(
-    get_handle(), lmbcs::cast(key), key.size(), &item_bid, &item_type,
+    get_handle(), lmbcs::cast(key), key.size(), reinterpret_cast<BLOCKID*>(&item_bid), &item_type,
     reinterpret_cast<BLOCKID*>(&value_bid), &value_len
   );
 
@@ -276,5 +275,5 @@ auto note::get_item_value_impl(const lmbcs::str& key) const -> std::optional<dmn
   result.throw_if_error("Failed to get item on note");
 
   auto owner = std::make_shared<dmn::note>(*this);
-  return dmn::object{value_bid, value_len, owner};
+  return dmn::object{value_bid, value_len, owner, item_bid};
 }

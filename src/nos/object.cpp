@@ -1,6 +1,35 @@
 #include "dmn/nos/object.hpp"
 
+#include <domino/global.h>
+#include <domino/nsfnote.h>
+
+#include <cstring>
+#include <stdexcept>
+#include <vector>
+
+#include "dmn/misc/error.hpp"
+#include "dmn/os/locker.hpp"
+
 using dmn::object;
+
+void object::write(dmn::type typ, std::span<uint8_t> data) {
+  if (!item_bid_) {
+    throw std::runtime_error("Object that is not an item value can't be overwritten.");
+  }
+
+  const size_t new_size = data.size() + sizeof(dmn::type);
+  if (new_size != size_) {
+    const auto raw_item_bid = *reinterpret_cast<BLOCKID*>(&*item_bid_);
+    const dmn::status result =
+      NSFItemRealloc(raw_item_bid, reinterpret_cast<BLOCKID*>(&bid_), new_size);
+    result.throw_if_error("Failed to reallocate object memory");
+  }
+
+  size_ = new_size;
+  dmn::os::locker pool(bid_, size_, dmn::os::ownership::borrow);
+  pool.write(&typ);
+  pool.write(data.data(), data.size());
+}
 
 auto object::as_string() const -> std::optional<std::string> {
   if (size_ < 2 || bid_.pool == dmn::dhandle_t{}) {
