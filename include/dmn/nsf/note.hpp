@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "dmn/misc/timedate.hpp"
 #include "dmn/nos/object.hpp"
 #include "dmn/nos/type.hpp"
 #include "dmn/os/lmbcs.hpp"
@@ -146,6 +147,8 @@ class note {
     } else if constexpr (std::is_convertible_v<T, double>) {
       auto conv_value = static_cast<double>(value);
       append_impl(conv_key, dmn::type::number, &conv_value, sizeof(conv_value));
+    } else if constexpr (std::is_convertible_v<T, dmn::time_date>) {
+      append_impl(conv_key, dmn::type::time, &value, sizeof(value));
     } else if constexpr (std::is_same_v<T, dmn::list>) {
       auto list_obj =
         dmn::os::locker(value.get_handle(), value.buffer_size(), dmn::os::ownership::borrow);
@@ -203,12 +206,11 @@ class note {
       return std::nullopt;
     }
 
-    if constexpr (std::is_same_v<T, std::string>) {
-      return value->try_as<std::string>();
-    } else if constexpr (std::is_convertible_v<T, double>) {
+    if constexpr (
+      std::is_same_v<T, std::string> || std::is_same_v<T, dmn::list> ||
+      std::is_same_v<T, dmn::time_date> || std::is_convertible_v<T, double>
+    ) {
       return value->try_as<T>();
-    } else if constexpr (std::is_same_v<T, dmn::list>) {
-      return value->try_as<dmn::list>();
     } else if constexpr (std::is_same_v<T, dmn::object>) {
       return value;
     } else {

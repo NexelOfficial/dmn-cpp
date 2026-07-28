@@ -10,15 +10,16 @@
 #include <type_traits>
 #include <utility>
 
+#include "dmn/misc/timedate.hpp"
 #include "dmn/nos/list.hpp"
 #include "dmn/nos/type.hpp"
 #include "dmn/os/lmbcs.hpp"
 #include "dmn/os/locker.hpp"
 
 template <typename T>
-concept is_item_value =
-  std::is_same_v<T, std::string> || std::is_same_v<T, dmn::list> || std::is_integral_v<T> ||
-  std::is_same_v<T, double> || std::is_same_v<T, bool>;
+concept is_item_value = std::is_same_v<T, std::string> || std::is_same_v<T, dmn::list> ||
+                        std::is_same_v<T, dmn::time_date> || std::is_integral_v<T> ||
+                        std::is_same_v<T, double> || std::is_same_v<T, bool>;
 
 namespace dmn {
 class object {
@@ -89,6 +90,10 @@ class object {
       return typ == dmn::type::number && data_size == sizeof(double);
     } else if constexpr (std::is_same_v<T, dmn::list>) {
       return typ == dmn::type::text_list && data_size >= sizeof(uint16_t);
+    } else if constexpr (
+      std::is_same_v<T, dmn::time_date> || std::is_same_v<T, std::chrono::system_clock::time_point>
+    ) {
+      return typ == dmn::type::time && data_size == sizeof(dmn::time_date);
     }
 
     return false;
@@ -133,6 +138,12 @@ class object {
       if (typ == dmn::type::text_list && data_size >= sizeof(uint16_t)) {
         return dmn::list(obj.get_pointer(0));
       }
+    } else if constexpr (std::is_same_v<T, dmn::time_date>) {
+      if (typ == dmn::type::time && data_size == sizeof(dmn::time_date)) {
+        dmn::time_date value{};
+        obj.read(value.innards.data(), sizeof(dmn::time_date));
+        return value;
+      }
     }
 
     return std::nullopt;
@@ -160,6 +171,7 @@ class object {
   /// \return The converted string, if available.
   /// \throws std::out_of_range If the object doesn't hold enough data.
   /// \throws dmn::error If the conversion to `dmn::list` fails, only if `T` is `dmn::list`.
+  /// \todo Add dmn::time_date conversion
   [[nodiscard]] auto as_string() const -> std::optional<std::string>;
 
  private:

@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -103,6 +104,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   const std::string weird_field_name = "Weird_Field_01";
   const std::string attachment_name = "workflow_addin_test.txt";
   const auto attachment_path = create_temp_attachment();
+  const auto now = dmn::time_date::from_time_point(std::chrono::system_clock::now());
 
   primary->set("Subject", subject);
   primary->append("EmptyText", empty_text);
@@ -110,6 +112,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   primary->append("NumericValue", 42.5);
   primary->append("ZeroValue", 0.0);
   primary->append("OneValue", 1.0);
+  primary->append("DateValue", now.value());
 
   dmn::list tags{};
   tags.push_back("alpha");
@@ -136,10 +139,12 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   const auto one_bool_value = primary->get<bool>("OneValue");
   const auto zero_bool_value = primary->get<bool>("ZeroValue");
   const auto tags_value = primary->get<dmn::list>("Tags");
+  const auto date_value = primary->get<dmn::time_date>("DateValue");
   const auto raw_numeric_value = primary->get<dmn::object>("NumericValue");
 
   REQUIRE_FALSE(numeric_text_value.has_value());
   REQUIRE(numeric_value.has_value());
+  REQUIRE(date_value.value() == now.value());
   REQUIRE(numeric_value.value() == 42.5);
   REQUIRE(numeric_int_value.has_value());
   REQUIRE(numeric_int_value.value() == 42);
@@ -174,6 +179,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   REQUIRE(filtered_items.contains("NumericValue"));
   REQUIRE(filtered_items.contains("ZeroValue"));
   REQUIRE(filtered_items.contains("OneValue"));
+  REQUIRE(filtered_items.contains("DateValue"));
   REQUIRE_FALSE(filtered_items.contains("Subject"));
   REQUIRE_FALSE(filtered_items.contains("Tags"));
 
