@@ -16,41 +16,11 @@
 #include "dmn/nsf/database.hpp"
 #include "dmn/nos/object.hpp"
 #include "dmn/nsf/note.hpp"
+#include "utils.hpp"
 
 namespace fs = std::filesystem;
 
 namespace {
-struct note_guard {
-  std::optional<dmn::note> value;
-
-  note_guard() = default;
-  note_guard(dmn::note note) : value(std::move(note)) {}
-
-  note_guard(const note_guard&) = delete;
-  auto operator=(const note_guard&) = delete;
-  note_guard(note_guard&&) = delete;
-  auto operator=(note_guard&&) = delete;
-
-  ~note_guard() {
-    if (!value) {
-      return;
-    }
-
-    try {
-      value->remove(true);
-    } catch (...) {
-    }
-    value.reset();
-  }
-
-  auto operator*() -> dmn::note& { return *value; }
-  auto operator*() const -> const dmn::note& { return *value; }
-  auto operator->() -> dmn::note* { return &*value; }
-  auto operator->() const -> const dmn::note* { return &*value; }
-
-  void release() noexcept { value.reset(); }
-};
-
 auto get_item_value(const dmn::database& db, dmn::note_id nid) -> std::optional<dmn::object> {
   auto note = db.get_note(nid);
   if (!note) {
@@ -59,14 +29,6 @@ auto get_item_value(const dmn::database& db, dmn::note_id nid) -> std::optional<
 
   return note->get<dmn::object>("Subject");
 };
-
-auto open_example_database() -> dmn::database {
-  auto db = dmn::database::open("Example.nsf");
-  if (!db) {
-    throw std::runtime_error("Failed to open Example.nsf");
-  }
-  return *db;
-}
 
 auto create_temp_attachment() -> fs::path {
   const auto path = fs::temp_directory_path() / "workflow_addin_note_test_attachment.txt";
@@ -81,11 +43,11 @@ auto create_temp_attachment() -> fs::path {
 }  // namespace
 
 TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
-  auto db = open_example_database();
+  auto db = utils::open_database("Example.nsf");
   REQUIRE(db.get_path().find("Example.nsf") != std::string::npos);
   REQUIRE(db.try_get_handle().has_value());
 
-  note_guard primary{db.create_note()};
+  utils::note_guard primary{db.create_note()};
   REQUIRE(primary->get_noteid().value != 0);
   REQUIRE(primary->try_get_handle().has_value());
   REQUIRE(primary->get_database().get_path().find("Example.nsf") != std::string::npos);
@@ -209,7 +171,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
 
   auto copied = primary->copy_to_database(db);
   REQUIRE(copied.has_value());
-  note_guard copy{std::move(*copied)};
+  utils::note_guard copy{std::move(*copied)};
   REQUIRE_FALSE(copy->get_noteid() == primary->get_noteid());
   const auto copied_subject = copy->get<std::string>("Subject");
   const auto copied_tags = copy->get<dmn::list>("Tags");
