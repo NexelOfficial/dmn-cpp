@@ -64,7 +64,7 @@ class object {
   /// \throws std::runtime_error If the object is not an item value.
   /// \throws dmn::error If the reallocation failed.
   /// \note Writing data is not possible when the object does not belong to an item value.
-  void write(dmn::type typ, std::span<uint8_t> data);
+  void write(dmn::type typ, std::span<const uint8_t> data);
 
   /// Check whether the object can be converted to a type.
   template <typename T>

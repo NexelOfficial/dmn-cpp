@@ -56,7 +56,7 @@ auto get_item_value(const dmn::database& db, dmn::note_id nid) -> std::optional<
     throw std::runtime_error("Failed to open note for item value");
   }
 
-  return note->get_item_value<dmn::object>("Subject");
+  return note->get<dmn::object>("Subject");
 };
 
 auto open_example_database() -> dmn::database {
@@ -104,39 +104,39 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   const std::string attachment_name = "workflow_addin_test.txt";
   const auto attachment_path = create_temp_attachment();
 
-  primary->replace_item_value("Subject", subject);
-  primary->append_item_value("EmptyText", empty_text);
-  primary->append_item_value("MultilineText", multiline);
-  primary->append_item_value("NumericValue", 42.5);
-  primary->append_item_value("ZeroValue", 0.0);
-  primary->append_item_value("OneValue", 1.0);
+  primary->set("Subject", subject);
+  primary->append("EmptyText", empty_text);
+  primary->append("MultilineText", multiline);
+  primary->append("NumericValue", 42.5);
+  primary->append("ZeroValue", 0.0);
+  primary->append("OneValue", 1.0);
 
   dmn::list tags{};
   tags.push_back("alpha");
   tags.push_back("beta");
   tags.push_back("gamma");
-  primary->append_item_value("Tags", tags);
-  primary->append_item_value(weird_field_name, std::string{"value"});
+  primary->append("Tags", tags);
+  primary->append(weird_field_name, std::string{"value"});
 
   REQUIRE_THROWS_AS(primary->compute_with_form(), dmn::error);
   REQUIRE_NOTHROW(primary->embed_element(attachment_name, attachment_path.string()));
   REQUIRE_NOTHROW(primary->embed_element(attachment_path.string()));
   REQUIRE_NOTHROW(primary->save(true));
 
-  REQUIRE(primary->has_item("Subject"));
-  REQUIRE(primary->has_item("EmptyText"));
-  REQUIRE(primary->has_item("MultilineText"));
-  REQUIRE(primary->has_item("NumericValue"));
-  REQUIRE(primary->has_item("Tags"));
-  REQUIRE_FALSE(primary->has_item("MissingField"));
+  REQUIRE(primary->has("Subject"));
+  REQUIRE(primary->has("EmptyText"));
+  REQUIRE(primary->has("MultilineText"));
+  REQUIRE(primary->has("NumericValue"));
+  REQUIRE(primary->has("Tags"));
+  REQUIRE_FALSE(primary->has("MissingField"));
 
-  const auto numeric_text_value = primary->get_item_value<std::string>("NumericValue");
-  const auto numeric_value = primary->get_item_value<double>("NumericValue");
-  const auto numeric_int_value = primary->get_item_value<int>("NumericValue");
-  const auto one_bool_value = primary->get_item_value<bool>("OneValue");
-  const auto zero_bool_value = primary->get_item_value<bool>("ZeroValue");
-  const auto tags_value = primary->get_item_value<dmn::list>("Tags");
-  const auto raw_numeric_value = primary->get_item_value<dmn::object>("NumericValue");
+  const auto numeric_text_value = primary->get<std::string>("NumericValue");
+  const auto numeric_value = primary->get<double>("NumericValue");
+  const auto numeric_int_value = primary->get<int>("NumericValue");
+  const auto one_bool_value = primary->get<bool>("OneValue");
+  const auto zero_bool_value = primary->get<bool>("ZeroValue");
+  const auto tags_value = primary->get<dmn::list>("Tags");
+  const auto raw_numeric_value = primary->get<dmn::object>("NumericValue");
 
   REQUIRE_FALSE(numeric_text_value.has_value());
   REQUIRE(numeric_value.has_value());
@@ -177,12 +177,12 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   REQUIRE_FALSE(filtered_items.contains("Subject"));
   REQUIRE_FALSE(filtered_items.contains("Tags"));
 
-  primary->replace_item_value("Subject", replacement_subject);
-  REQUIRE(primary->get_item_value<std::string>("Subject").value() == replacement_subject);
+  primary->set("Subject", replacement_subject);
+  REQUIRE(primary->get<std::string>("Subject").value() == replacement_subject);
 
-  primary->remove_item("EmptyText");
-  REQUIRE_FALSE(primary->has_item("EmptyText"));
-  REQUIRE(primary->get_item_value<std::string>("EmptyText") == std::nullopt);
+  primary->erase("EmptyText");
+  REQUIRE_FALSE(primary->has("EmptyText"));
+  REQUIRE(primary->get<std::string>("EmptyText") == std::nullopt);
 
   REQUIRE_NOTHROW(primary->save(true));
 
@@ -190,14 +190,14 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   REQUIRE(reopened_by_id.has_value());
   REQUIRE(reopened_by_id->get_noteid() == original_noteid);
   REQUIRE(reopened_by_id->get_universalid() == original_unid);
-  const auto reopened_subject = reopened_by_id->get_item_value<std::string>("Subject");
+  const auto reopened_subject = reopened_by_id->get<std::string>("Subject");
   REQUIRE(reopened_subject.has_value());
   REQUIRE(reopened_subject.value() == replacement_subject);
 
   auto reopened_by_unid = db.get_note(original_unid);
   REQUIRE(reopened_by_unid.has_value());
   REQUIRE(reopened_by_unid->get_noteid() == original_noteid);
-  const auto reopened_numeric = reopened_by_unid->get_item_value<double>("NumericValue");
+  const auto reopened_numeric = reopened_by_unid->get<double>("NumericValue");
   REQUIRE(reopened_numeric.has_value());
   REQUIRE(reopened_numeric.value() == 42.5);
 
@@ -205,8 +205,8 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   REQUIRE(copied.has_value());
   note_guard copy{std::move(*copied)};
   REQUIRE_FALSE(copy->get_noteid() == primary->get_noteid());
-  const auto copied_subject = copy->get_item_value<std::string>("Subject");
-  const auto copied_tags = copy->get_item_value<dmn::list>("Tags");
+  const auto copied_subject = copy->get<std::string>("Subject");
+  const auto copied_tags = copy->get<dmn::list>("Tags");
   REQUIRE(copied_subject.has_value());
   REQUIRE(copied_subject.value() == replacement_subject);
   REQUIRE(copied_tags.has_value());

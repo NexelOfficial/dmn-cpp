@@ -12,7 +12,7 @@
 
 using dmn::object;
 
-void object::write(dmn::type typ, std::span<uint8_t> data) {
+void object::write(dmn::type typ, std::span<const uint8_t> data) {
   if (!item_bid_) {
     throw std::runtime_error("Object that is not an item value can't be overwritten.");
   }

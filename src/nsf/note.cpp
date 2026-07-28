@@ -86,7 +86,7 @@ auto note::create(dmn::database db) -> note {
   return {std::move(db), noteid, handle};
 }
 
-auto note::has_item(std::string_view key) const -> bool {
+auto note::has(std::string_view key) const -> bool {
   const lmbcs::str converted = lmbcs::translate(key);
   return NSFItemIsPresent(get_handle(), lmbcs::cast(converted), converted.size());
 }
@@ -106,7 +106,7 @@ auto note::copy_to_database(const dmn::database& db) const -> std::optional<note
   return note::open(db, new_noteid);
 }
 
-void note::append_item_value(
+void note::append_impl(
   const lmbcs::str& key, dmn::type type, const void* data, uint16_t size
 ) const {
   const bool is_summary = size < MAXONESEGSIZE / 4;
@@ -115,6 +115,18 @@ void note::append_item_value(
     get_handle(), is_summary ? ITEM_SUMMARY : 0, lmbcs::cast(key), key.size(), data_type, data, size
   );
   result.throw_if_error("Failed to append item value");
+}
+
+void note::modify_impl(
+  std::string_view key, dmn::type type, const void* data, uint16_t size
+) const {
+  auto existing = get<dmn::object>(key);
+  if (!existing) {
+    throw std::invalid_argument("Provided key doesn't exist on note.");
+  }
+
+  const std::span<const uint8_t> buffer{reinterpret_cast<const uint8_t*>(data), size};
+  existing->write(type, buffer);
 }
 
 void note::embed_element(const std::string& name, const std::string& path) const {
@@ -151,7 +163,7 @@ void note::compute_with_form() const {
   result.throw_if_error("Failed to compute with form");
 }
 
-void note::remove_item(std::string_view key) const {
+void note::erase(std::string_view key) const {
   const lmbcs::str converted = lmbcs::translate(key);
   const dmn::status result = NSFItemDelete(get_handle(), lmbcs::cast(converted), converted.size());
   result.throw_if_error("Failed to remove key");
@@ -258,7 +270,7 @@ auto note::get_universalid() const -> std::string {
   return id.universalid.to_string();
 }
 
-auto note::get_item_value_impl(const lmbcs::str& key) const -> std::optional<dmn::object> {
+auto note::get_impl(const lmbcs::str& key) const -> std::optional<dmn::object> {
   dmn::os::block_id item_bid{};
   uint16_t item_type = 0;
   dmn::os::block_id value_bid{};

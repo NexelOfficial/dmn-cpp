@@ -3,7 +3,6 @@
 #include <memory>
 #include <optional>
 #include <regex>
-#include <typeindex>
 #include <string>
 #include <unordered_map>
 
@@ -32,7 +31,7 @@ class note {
   /// \param key Item to look up.
   /// \return true if the item exists; otherwise false.
   /// \throws std::runtime_error If the underlying handle is empty.
-  [[nodiscard]] auto has_item(std::string_view key) const -> bool;
+  [[nodiscard]] auto has(std::string_view key) const -> bool;
 
   /// Copy this note to another database.
   ///
@@ -42,12 +41,12 @@ class note {
   /// \throws std::runtime_error If an underlying handle is empty.
   [[nodiscard]] auto copy_to_database(const dmn::database& db) const -> std::optional<note>;
 
-  /// Remove an item from the note.
+  /// Erase an item from the note.
   ///
-  /// \param key Item name to remove.
-  /// \throws dmn::error If the item cannot be removed.
+  /// \param key Item name to erse.
+  /// \throws dmn::error If the item cannot be erased.
   /// \throws std::runtime_error If the underlying handle is empty.
-  void remove_item(std::string_view key) const;
+  void erase(std::string_view key) const;
 
   /// Embed a file attachment in the note.
   ///
@@ -117,18 +116,19 @@ class note {
   /// \return Scan results that contain the item name and type.
   [[nodiscard]] auto items(std::optional<std::regex> pattern) const -> object_map_t;
 
-  /// Replace an item of the note.
+  /// Set an item of the note.
   ///
   /// \param key Item name.
   /// \param value Value to set.
   /// \throws dmn::error If the existing item cannot be removed or the new value cannot be stored.
   /// \throws std::runtime_error If the underlying handle is empty.
   template <typename T>
-  void replace_item_value(std::string_view key, const T& value) const {
-    if (has_item(key)) {
-      remove_item(key);
+  void set(std::string_view key, const T& value) const {
+    if (!has(key)) {
+      append(key, value);
+      return;
     }
-    append_item_value(key, value);
+    modify(key, value);
   }
 
   /// Append an item to the note.
@@ -138,24 +138,53 @@ class note {
   /// \throws dmn::error If the value cannot be appended.
   /// \throws std::runtime_error If the underlying handle is empty.
   template <typename T>
-  void append_item_value(std::string_view key, const T& value) const {
+  void append(std::string_view key, const T& value) const {
     const lmbcs::str conv_key = lmbcs::translate(key);
     if constexpr (std::is_convertible_v<T, std::string_view>) {
       auto conv_value = lmbcs::translate(value);
-      append_item_value(conv_key, dmn::type::text, conv_value.data(), conv_value.size());
+      append_impl(conv_key, dmn::type::text, conv_value.data(), conv_value.size());
     } else if constexpr (std::is_convertible_v<T, double>) {
-      auto converted = static_cast<double>(value);
-      append_item_value(conv_key, dmn::type::number, &converted, sizeof(converted));
+      auto conv_value = static_cast<double>(value);
+      append_impl(conv_key, dmn::type::number, &conv_value, sizeof(conv_value));
     } else if constexpr (std::is_same_v<T, dmn::list>) {
       auto list_obj =
         dmn::os::locker(value.get_handle(), value.buffer_size(), dmn::os::ownership::borrow);
 
-      append_item_value(
+      append_impl(
         conv_key, dmn::type::text_list, list_obj.get_pointer(sizeof(uint16_t)),
         value.buffer_size() - sizeof(uint16_t)
       );
     } else {
-      static_assert(std::false_type::value, "Unsupported type for append_item_value");
+      static_assert(std::false_type::value, "Unsupported type for append-function");
+    }
+  }
+
+  /// Modify an item value of the note.
+  ///
+  /// \param key Item name.
+  /// \param value Value to append.
+  /// \throws dmn::error If the value cannot be appended.
+  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws std::invalid_argument If the provided item doesn't exist on the note.
+  /// \note Prefer the safer function `set()` unless you know what you're doing.
+  template <typename T>
+  void modify(std::string_view key, const T& value) const {
+    if constexpr (std::is_convertible_v<T, std::string_view>) {
+      auto conv_value = lmbcs::translate(value);
+      modify_impl(key, dmn::type::text, conv_value.data(), conv_value.size());
+    } else if constexpr (std::is_convertible_v<T, double>) {
+      auto conv_value = static_cast<double>(value);
+      modify_impl(key, dmn::type::number, &conv_value, sizeof(conv_value));
+    } else if constexpr (std::is_same_v<T, dmn::list>) {
+      auto list_obj =
+        dmn::os::locker(value.get_handle(), value.buffer_size(), dmn::os::ownership::borrow);
+
+      modify_impl(
+        key, dmn::type::text_list, list_obj.get_pointer(sizeof(uint16_t)),
+        value.buffer_size() - sizeof(uint16_t)
+      );
+    } else {
+      static_assert(std::false_type::value, "Unsupported type for append-function");
     }
   }
 
@@ -167,9 +196,9 @@ class note {
   /// \note When getting the item as a string, all non-string types are converted to string
   /// automatically thus the type is not checked.
   template <typename T>
-  [[nodiscard]] auto get_item_value(std::string_view key) const -> std::optional<T> {
+  [[nodiscard]] auto get(std::string_view key) const -> std::optional<T> {
     const lmbcs::str converted = lmbcs::translate(key);
-    auto value = get_item_value_impl(converted);
+    auto value = get_impl(converted);
     if (!value) {
       return std::nullopt;
     }
@@ -183,7 +212,7 @@ class note {
     } else if constexpr (std::is_same_v<T, dmn::object>) {
       return value;
     } else {
-      static_assert(std::false_type::value, "Unsupported type for get_item_value");
+      static_assert(std::false_type::value, "Unsupported type for get-function");
     }
   }
 
@@ -215,14 +244,12 @@ class note {
   /// Internal implementation used by `dmn::database`.
   static auto create(dmn::database db) -> note;
 
-  /// Internal implementation used by `dmn::note::get_item_value()`.
-  [[nodiscard]] auto get_item_value_impl(const lmbcs::str& key) const -> std::optional<dmn::object>;
-  /// Internal implementation used by `dmn::note::append_item_value()`.
-  void append_item_value(
-    const lmbcs::str& key, dmn::type type, const void* data, uint16_t size
-  ) const;
-  /// Internal implementation used by `dmn::note::append_item_value()`.
-  static auto get_raw_item_type(std::type_index type) -> uint16_t;
+  /// Internal implementation used by `dmn::note::get()`.
+  [[nodiscard]] auto get_impl(const lmbcs::str& key) const -> std::optional<dmn::object>;
+  /// Internal implementation used by `dmn::note::append()`.
+  void append_impl(const lmbcs::str& key, dmn::type type, const void* data, uint16_t size) const;
+  /// Internal implementation used by `dmn::note::modify()`.
+  void modify_impl(std::string_view key, dmn::type type, const void* data, uint16_t size) const;
 
   friend class database;
   friend class view;
