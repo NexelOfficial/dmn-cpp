@@ -46,9 +46,14 @@ class memory {
       read(&buff, sizeof(T));
       return buff;
     } else if constexpr (is_valid_string<T>) {
-      auto* ptr = buffer_.subspan(offset_).data();
-      const size_t str_size = std::strlen(reinterpret_cast<char*>(ptr));
+      const auto remaining = buffer_.subspan(offset_);
+      const auto* start = reinterpret_cast<const char*>(remaining.data());
+      const auto* end = static_cast<const char*>(std::memchr(start, '\0', remaining.size()));
+      if (end == nullptr) {
+        throw std::runtime_error("String does not end within bounds");
+      }
 
+      const auto str_size = static_cast<size_t>(end - start);
       T buff(str_size, '\0');
       read(buff.data(), str_size);
       increment_offset(1);

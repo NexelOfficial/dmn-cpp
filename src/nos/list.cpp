@@ -27,7 +27,7 @@ list::list() : hdl_(OSMemFree) {
 list::list(void* existing) : hdl_(OSMemFree) {
   const uint16_t type = *static_cast<uint16_t*>(existing);
   if (type != TYPE_TEXT_LIST) {
-    throw std::invalid_argument("Provided pointer is not of a text list.");
+    throw std::invalid_argument("Provided pointer is not of a text list");
   }
 
   const dmn::status result = ListDuplicate(static_cast<LIST*>(existing), TRUE, hdl_.data());

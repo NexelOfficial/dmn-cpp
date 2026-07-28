@@ -122,7 +122,7 @@ void note::modify_impl(
 ) const {
   auto existing = get<dmn::object>(key);
   if (!existing) {
-    throw std::invalid_argument("Provided key doesn't exist on note.");
+    throw std::invalid_argument("Provided key doesn't exist on note");
   }
 
   const std::span<const uint8_t> buffer{reinterpret_cast<const uint8_t*>(data), size};

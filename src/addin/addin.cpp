@@ -52,7 +52,7 @@ auto addin::day_elapsed() -> bool { return AddInDayHasElapsed() != FALSE; }
 
 void addin::enter_loop(const function_t& callback) const {
   if (!status_hdl_) {
-    throw std::runtime_error("Status line or message queue invalid.");
+    throw std::runtime_error("Status line or message queue invalid");
   }
 
   const std::scoped_lock lock(mtx);

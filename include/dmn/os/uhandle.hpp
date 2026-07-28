@@ -82,7 +82,7 @@ class uhandle {
   /// \throws std::runtime_error If the managed handle is null.
   [[nodiscard]] auto get() const -> T {
     if (hdl_ == null_value()) {
-      throw std::runtime_error("Empty handle accessed.");
+      throw std::runtime_error("Empty handle accessed");
     }
 
     return hdl_;

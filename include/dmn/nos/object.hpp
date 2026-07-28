@@ -160,7 +160,7 @@ class object {
   [[nodiscard]] auto as() const -> T {
     auto result = try_as<T>();
     if (!result) {
-      throw std::runtime_error{"item_value cannot be converted to requested type"};
+      throw std::runtime_error("item_value cannot be converted to requested type");
     }
 
     return std::move(*result);
