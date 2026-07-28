@@ -26,25 +26,34 @@ struct unid {
 
   /// Cast to raw UNIVERSALNOTEID structure.
   [[nodiscard]] auto as_raw_unid() noexcept -> UNIVERSALNOTEID_tag*;
+
+  auto operator==(unid other) const noexcept -> bool {
+    return file == other.file && note == other.note;
+  }
 };
 
 struct oid {
   dmn::unid universalid;
   uint32_t sequence;
   std::array<uint32_t, 2> sequence_time;
+
+  auto operator==(oid other) const noexcept -> bool {
+    return universalid == other.universalid && sequence == other.sequence &&
+           sequence_time == other.sequence_time;
+  }
 };
 
 struct note_id {
-  #ifdef W32
+#ifdef W32
   using value_t = unsigned long;
-  #else
+#else
   using value_t = unsigned int;
-  #endif
+#endif
 
   value_t value;
 
-  constexpr note_id(value_t id) : value(id) {};
-  constexpr note_id() : value(0) {};
+  constexpr note_id(value_t id) noexcept : value(id) {};
+  constexpr note_id() noexcept : value(0) {};
 
   auto operator==(note_id other) const noexcept -> bool { return value == other.value; }
 

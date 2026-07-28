@@ -14,7 +14,6 @@
 #include "dmn/os/locker.hpp"
 #include "dmn/nos/list.hpp"
 #include "dmn/nsf/database.hpp"
-#include "dmn/nsf/note_lock.hpp"
 #include "dmn/misc/unid.hpp"
 
 namespace dmn {
@@ -85,32 +84,6 @@ class note {
   /// \throws dmn::error If the note cannot be deleted.
   /// \throws std::runtime_error If an underlying handle is empty.
   void remove(bool force) const;
-
-  /// Acquire a lock for the note.
-  ///
-  /// \throws dmn::error If the note is locked by another instance.
-  /// \note Does nothing if the note is already locked by this instance.
-  /// \note Uses Domino's Note locking mechanism, which must be enabled for the database.
-  void lock();
-
-  /// Attempt to acquire a lock for the note.
-  ///
-  /// \return true if the note is locked after the call, false otherwise.
-  /// \note Uses Domino's Note locking mechanism, which must be enabled for the database.
-  auto try_lock() noexcept -> bool;
-
-  /// Release the note lock.
-  ///
-  /// \throws dmn::error If the note cannot be unlocked.
-  /// \note Does nothing if the note is not locked.
-  /// \note Uses Domino's Note locking mechanism, which must be enabled for the database.
-  void unlock();
-
-  /// Attempt to release the note lock.
-  ///
-  /// \return true if the note is unlocked after the call, false otherwise.
-  /// \note Uses Domino's Note locking mechanism, which must be enabled for the database.
-  auto try_unlock() noexcept -> bool;
 
   /// Collect all items of the note to a map.
   ///
@@ -219,11 +192,30 @@ class note {
     }
   }
 
+  /// Get information about the note.
+  ///
+  /// \return Retrieved information
+  /// \throws std::runtime_error If the underlying handle is empty.
+  template <dmn::info Info>
+  [[nodiscard]] auto info() const {
+    if constexpr (Info == dmn::info::note_id) {
+      dmn::note_id value{};
+      get_info_impl(dmn::info::note_id, &value);
+      return value;
+    } else if constexpr (Info == dmn::info::oid) {
+      dmn::oid value{};
+      get_info_impl(dmn::info::oid, &value);
+      return value;
+    } else if constexpr (Info == dmn::info::unid) {
+      dmn::oid value{};
+      get_info_impl(dmn::info::oid, &value);
+      return value.universalid;
+    } else {
+      static_assert(std::false_type::value, "Unsupported type for get_info");
+    }
+  }
+
   [[nodiscard]] auto get_database() const -> const dmn::database& { return db_; }
-
-  [[nodiscard]] auto get_universalid() const -> std::string;
-
-  [[nodiscard]] auto get_noteid() const noexcept -> dmn::note_id { return noteid_; }
 
   [[nodiscard]] auto try_get_handle() const noexcept -> std::optional<handle_t> {
     return hdl_->try_get();
@@ -235,13 +227,11 @@ class note {
 
   using managed_handle_t = dmn::uhandle<handle_t>;
   std::shared_ptr<managed_handle_t> hdl_;
-  std::shared_ptr<dmn::note_lock> lock_;
-  dmn::note_id noteid_;
 
-  note(dmn::database db, dmn::note_id noteid, handle_t handle);
+  note(dmn::database db, handle_t handle);
 
   /// Internal implementation used by `dmn::database`.
-  static auto open(dmn::database db, std::string_view unid) -> std::optional<note>;
+  static auto open(dmn::database db, dmn::unid unid) -> std::optional<note>;
   /// Internal implementation used by `dmn::database`.
   static auto open(dmn::database db, dmn::note_id noteid) -> std::optional<note>;
   /// Internal implementation used by `dmn::database`.
@@ -249,6 +239,8 @@ class note {
 
   /// Internal implementation used by `dmn::note::get()`.
   [[nodiscard]] auto get_impl(const lmbcs::str& key) const -> std::optional<dmn::object>;
+  /// Internal implementation used by `dmn::note::get_info()`.
+  void get_info_impl(dmn::info key, void* out) const;
   /// Internal implementation used by `dmn::note::append()`.
   void append_impl(const lmbcs::str& key, dmn::type type, const void* data, uint16_t size) const;
   /// Internal implementation used by `dmn::note::modify()`.

@@ -70,6 +70,8 @@ class database {
   ///
   /// \return Newly created note
   /// \throws std::runtime_error If the underlying database handle is empty.
+  /// \note The note only exists in memory after creation and doesn't have valid identifiers. Use
+  /// `dmn::note::save()` to write it to disk and allocate identifiers.
   [[nodiscard]] auto create_note() const -> note;
 
   /// Open a note by Note ID.
@@ -84,7 +86,7 @@ class database {
   /// \param unid Universal identifier.
   /// \return Opened note if found; otherwise an empty result indicating the note does not exist.
   /// \throws std::runtime_error If the underlying database handle is empty.
-  [[nodiscard]] auto get_note(std::string_view unid) const -> std::optional<note>;
+  [[nodiscard]] auto get_note(dmn::unid unid) const -> std::optional<note>;
 
   /// Open an agent by name from the database.
   ///

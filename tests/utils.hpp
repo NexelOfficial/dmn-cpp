@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <random>
 
 #include "dmn/nsf/note.hpp"
 
@@ -42,5 +43,28 @@ inline auto open_database(std::string_view name) -> dmn::database {
     throw std::runtime_error("Failed to open Example.nsf");
   }
   return *db;
+}
+
+inline auto random_string(size_t len) -> std::string {
+  constexpr static std::string_view RAND_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  static std::random_device rd{};
+  static std::mt19937 gen{rd()};
+
+  std::string output;
+  for (size_t i = 0; i < len; ++i) {
+    std::uniform_int_distribution<> distrib(0, RAND_CHARSET.size() - 1);
+    output += RAND_CHARSET.at(distrib(gen));
+  }
+  return output;
+}
+
+inline auto random_small_string() -> std::string {
+  constexpr static size_t SMALL_LEN = 32;
+  return random_string(SMALL_LEN);
+}
+
+inline auto random_large_string() -> std::string {
+  constexpr static size_t LARGE_LEN = 0xFFFF;
+  return random_string(LARGE_LEN);
 }
 }  // namespace utils

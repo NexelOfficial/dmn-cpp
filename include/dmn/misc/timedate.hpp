@@ -25,8 +25,6 @@ struct time_date {
   /// Cast to raw TIMEDATE structure.
   [[nodiscard]] auto as_raw_time_date() noexcept -> tagTIMEDATE*;
 
-  auto operator==(time_date other) const noexcept -> bool {
-    return innards.at(0) == other.innards.at(0) && innards.at(1) == innards.at(1);
-  }
+  auto operator==(time_date other) const noexcept -> bool { return innards == other.innards; }
 };
 }  // namespace dmn

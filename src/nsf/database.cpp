@@ -110,7 +110,7 @@ auto database::get_note(dmn::note_id noteid) const -> std::optional<dmn::note> {
   return dmn::note::open(*this, noteid);
 };
 
-auto database::get_note(std::string_view unid) const -> std::optional<dmn::note> {
+auto database::get_note(dmn::unid unid) const -> std::optional<dmn::note> {
   return dmn::note::open(*this, unid);
 }
 

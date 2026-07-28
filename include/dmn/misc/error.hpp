@@ -12,7 +12,7 @@ struct status {
 
   constexpr status(value_t code) : value(code) {}
 
-  auto operator==(value_t other) const -> bool { return value == other; }
+  auto operator==(value_t other) const noexcept -> bool { return value == other; }
 
   /// Check whether the status code is some form of not-found error.
   ///

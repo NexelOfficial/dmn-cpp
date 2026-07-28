@@ -45,4 +45,10 @@ enum class type : uint16_t {
   mime_part = 25U,
   seal2 = 31U
 };
+
+enum class info : uint16_t {
+  note_id = 1U,
+  oid = 2U,
+  unid = 2U | 0x8000U,
+};
 }  // namespace dmn

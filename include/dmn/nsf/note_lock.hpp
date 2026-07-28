@@ -13,7 +13,11 @@ class note_lock {
       : owns_lock_(true), db_(std::move(db)), noteid_(noteid) {}
   ~note_lock() noexcept { (void)try_unlock(); }
 
-  note_lock(note_lock&& other) noexcept = delete;
+  note_lock(note_lock&& other) noexcept
+      : owns_lock_(std::exchange(other.owns_lock_, false)),
+        db_(std::move(other.db_)),
+        noteid_(std::exchange(other.noteid_, 0)) {}
+
   auto operator=(note_lock&& other) = delete;
   note_lock(const note_lock& other) = delete;
   auto operator=(const note_lock& other) = delete;
@@ -25,8 +29,7 @@ class note_lock {
   /// \return A note_lock instance owning the acquired lock.
   /// \throws dmn::error If the note is already locked or can't be acquired.
   /// \throws std::runtime_error If the underlying handle is empty.
-  [[nodiscard]] static auto acquire(dmn::database db, dmn::note_id noteid)
-    -> std::shared_ptr<note_lock>;
+  [[nodiscard]] static auto acquire(dmn::database db, dmn::note_id noteid) -> note_lock;
 
   /// Try to acquire an exclusive lock for a note.
   ///
@@ -34,7 +37,7 @@ class note_lock {
   /// \param noteid Note ID of the note to lock.
   /// \return A note_lock instance if the lock was acquired successfully, if available.
   [[nodiscard]] static auto try_acquire(dmn::database db, dmn::note_id noteid) noexcept
-    -> std::shared_ptr<note_lock>;
+    -> std::optional<note_lock>;
 
   /// Try to release the owned note lock.
   ///

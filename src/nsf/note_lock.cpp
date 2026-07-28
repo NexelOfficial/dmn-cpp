@@ -10,29 +10,29 @@
 
 using dmn::note_lock;
 
-auto note_lock::acquire(dmn::database db, dmn::note_id noteid) -> std::shared_ptr<note_lock> {
+auto note_lock::acquire(dmn::database db, dmn::note_id noteid) -> note_lock {
   const dmn::status result = lock_note(db.get_handle(), noteid);
   if (result.is_locked()) {
     throw dmn::error("Note is already locked", result);
   }
   result.throw_if_error("Failed to acquire lock");
 
-  return std::make_shared<note_lock>(std::move(db), noteid);
+  return {std::move(db), noteid};
 }
 
 auto note_lock::try_acquire(dmn::database db, dmn::note_id noteid) noexcept
-  -> std::shared_ptr<note_lock> {
+  -> std::optional<note_lock> {
   auto db_handle = db.try_get_handle();
   if (!db_handle) {
-    return nullptr;
+    return std::nullopt;
   }
 
   const dmn::status result = lock_note(*db_handle, noteid);
   if (result.is_error()) {
-    return nullptr;
+    return std::nullopt;
   }
 
-  return std::make_shared<note_lock>(std::move(db), noteid);
+  return note_lock(std::move(db), noteid);
 }
 
 auto note_lock::try_unlock() noexcept -> bool {

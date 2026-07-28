@@ -11,6 +11,7 @@
 #include <string_view>
 #include <utility>
 
+#include "dmn/misc/error.hpp"
 #include "dmn/misc/unid.hpp"
 #include "dmn/nos/list.hpp"
 #include "dmn/nsf/database.hpp"
@@ -48,18 +49,12 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   REQUIRE(db.try_get_handle().has_value());
 
   utils::note_guard primary{db.create_note()};
-  REQUIRE(primary->get_noteid().value != 0);
+  REQUIRE(primary->info<dmn::info::note_id>() == dmn::note_id{});
   REQUIRE(primary->try_get_handle().has_value());
   REQUIRE(primary->get_database().get_path().find("Example.nsf") != std::string::npos);
 
-  const auto original_noteid = primary->get_noteid();
-  const auto original_unid = primary->get_universalid();
-  REQUIRE(original_unid.size() == 32);
-  const auto parsed_unid = dmn::unid::from_string(original_unid);
-  REQUIRE(parsed_unid.has_value());
-  REQUIRE(parsed_unid->to_string() == original_unid);
-
-  const std::string subject = "Subject with emoji 🐶";
+  const std::string subject = utils::random_small_string() + "UTF-8: 🐶";
+  const std::string huge_text = utils::random_large_string();
   const std::string multiline = "Line 1\nLine 2\r\nLine 3 with punctuation !@#$%^&*()";
   const std::string empty_text = "";
   const std::string replacement_subject = "Updated subject";
@@ -83,6 +78,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   primary->append("Tags", tags);
   primary->append(weird_field_name, std::string{"value"});
 
+  REQUIRE_THROWS_AS(primary->set("HugeText", huge_text), dmn::error);
   REQUIRE_THROWS_AS(primary->compute_with_form(), dmn::error);
   REQUIRE_NOTHROW(primary->embed_element(attachment_name, attachment_path.string()));
   REQUIRE_NOTHROW(primary->embed_element(attachment_path.string()));
@@ -119,7 +115,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   REQUIRE(raw_numeric_value.has_value());
   REQUIRE(raw_numeric_value->try_as<double>().value() == 42.5);
 
-  const auto subject_item_value = get_item_value(db, primary->get_noteid());
+  const auto subject_item_value = get_item_value(db, primary->info<dmn::info::note_id>());
   REQUIRE(subject_item_value.has_value());
   REQUIRE(subject_item_value->is<std::string>());
   REQUIRE_FALSE(subject_item_value->empty());
@@ -154,17 +150,26 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
 
   REQUIRE_NOTHROW(primary->save(true));
 
+  const auto original_noteid = primary->info<dmn::info::note_id>();
+  const auto original_unid = primary->info<dmn::info::unid>();
+  const auto string_unid = original_unid.to_string();
+  REQUIRE(string_unid.size() == 32);
+  const auto parsed_unid = dmn::unid::from_string(string_unid);
+  REQUIRE(parsed_unid.has_value());
+  REQUIRE(parsed_unid->to_string() == string_unid);
+  REQUIRE(parsed_unid == original_unid);
+
   auto reopened_by_id = db.get_note(original_noteid);
   REQUIRE(reopened_by_id.has_value());
-  REQUIRE(reopened_by_id->get_noteid() == original_noteid);
-  REQUIRE(reopened_by_id->get_universalid() == original_unid);
+  REQUIRE(reopened_by_id->info<dmn::info::note_id>() == original_noteid);
+  REQUIRE(reopened_by_id->info<dmn::info::unid>() == original_unid);
   const auto reopened_subject = reopened_by_id->get<std::string>("Subject");
   REQUIRE(reopened_subject.has_value());
   REQUIRE(reopened_subject.value() == replacement_subject);
 
   auto reopened_by_unid = db.get_note(original_unid);
   REQUIRE(reopened_by_unid.has_value());
-  REQUIRE(reopened_by_unid->get_noteid() == original_noteid);
+  REQUIRE(reopened_by_unid->info<dmn::info::note_id>() == original_noteid);
   const auto reopened_numeric = reopened_by_unid->get<double>("NumericValue");
   REQUIRE(reopened_numeric.has_value());
   REQUIRE(reopened_numeric.value() == 42.5);
@@ -172,7 +177,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   auto copied = primary->copy_to_database(db);
   REQUIRE(copied.has_value());
   utils::note_guard copy{std::move(*copied)};
-  REQUIRE_FALSE(copy->get_noteid() == primary->get_noteid());
+  REQUIRE_FALSE(copy->info<dmn::info::note_id>() == primary->info<dmn::info::note_id>());
   const auto copied_subject = copy->get<std::string>("Subject");
   const auto copied_tags = copy->get<dmn::list>("Tags");
   REQUIRE(copied_subject.has_value());
