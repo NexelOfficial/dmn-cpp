@@ -39,6 +39,7 @@ class note {
   /// \param db Target database.
   /// \return Copy of the note in the target database.
   /// \throws dmn::error If the note cannot be copied.
+  /// \throws std::runtime_error If the new note doesn't have a note id.
   /// \throws std::runtime_error If an underlying handle is empty.
   [[nodiscard]] auto copy_to_database(const dmn::database& db) const -> std::optional<note>;
 

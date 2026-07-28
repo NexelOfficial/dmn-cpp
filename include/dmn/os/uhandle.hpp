@@ -50,7 +50,7 @@ class uhandle {
   ///
   /// Sets the handle to a null value preventing the cleanup function from being called.
   /// \return The underlying handle before releasing.
-  auto release() noexcept -> T {
+  auto release() -> T {
     auto old = hdl_;
     hdl_ = null_value();
     return old;

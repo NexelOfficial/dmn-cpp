@@ -100,7 +100,7 @@ auto note::copy_to_database(const dmn::database& db) const -> std::optional<note
 
   result.throw_if_error("Failed to copy note");
   if (new_noteid == dmn::note_id{}) {
-    throw dmn::error("Failed to copy note");
+    throw std::runtime_error("New note copy has empty note_id");
   }
 
   return note::open(db, new_noteid);

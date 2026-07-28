@@ -43,7 +43,8 @@ class database {
   ///
   /// \param names Names list to evaluate.
   /// \return Effective ACL access level.
-  /// \throws dmn::error If the names list is empty or the access level cannot be determined.
+  /// \throws dmn::error If the access level cannot be determined.
+  /// \throws std::invalid_argument If the names list is empty.
   /// \throws std::runtime_error If the underlying database handle is empty.
   [[nodiscard]] auto get_access_level(dmn::acl::names& names) const -> uint16_t;
 

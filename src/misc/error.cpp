@@ -34,10 +34,6 @@ void status::throw_if_error(const char* message) const {
   }
 }
 
-error::error(const char* message)
-    : code_(ERR_MISC_UNEXPECTED_ERROR),
-      message_(std::format("{}: {}", message, "Unexpected internal error")) {}
-
 error::error(const char* message, status code)
     : code_(code), message_(std::format("{}: {}", message, get_error_message(code))) {}
 

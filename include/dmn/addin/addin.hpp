@@ -20,6 +20,7 @@ class addin {
   /// \param name Name of the add-in.
   /// \return Initialized add-in instance.
   /// \throws dmn::error If message queue creation or status line creation fails.
+  /// \throws std::runtime_error If created status line is invalid.
   static auto create(std::string_view name) -> addin;
 
   /// Update the add-in status line.

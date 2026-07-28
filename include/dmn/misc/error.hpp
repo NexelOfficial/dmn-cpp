@@ -40,8 +40,6 @@ constexpr static status no_error = status(0);
 
 class error : public std::exception {
  public:
-  explicit error(const char* message);
-
   explicit error(const char* message, status code);
 
   /// Get the final error message.

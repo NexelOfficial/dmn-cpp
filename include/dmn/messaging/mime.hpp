@@ -54,7 +54,8 @@ class mime {
   ///
   /// \param note Note to write the field to.
   /// \param field Name of the field to write.
-  /// \throws dmn::error If appending the field fails.
+  /// \throws dmn::error If appending to the note fails.
+  /// \throws std::runtime_error If writing the content fails.
   /// \throws std::runtime_error If the underlying handle is empty.
   template <typename T>
     requires is_mime_note<T>

@@ -54,6 +54,7 @@ class mail {
   /// \param from Sender email address.
   /// \param subject Message subject.
   /// \throws dmn::error If the sending process failed.
+  /// \throws std::runtime_error If no recipients were added to the mail.
   void send(const std::string& from, const std::string& subject);
 
   [[nodiscard]] auto get_handle() const -> dmn::dhandle_t { return msg_hdl_.get(); }

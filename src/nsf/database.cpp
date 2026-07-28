@@ -58,7 +58,7 @@ auto database::open(std::string_view file, const dmn::acl::names& names)
 
 auto database::get_access_level(dmn::acl::names& names) const -> uint16_t {
   if (names.get_count() == 0) {
-    throw dmn::error("Names list is empty");
+    throw std::invalid_argument("Names list is empty");
   }
 
   const auto acl = dmn::acl::manager::read(*this);

@@ -26,7 +26,7 @@ auto addin::create(std::string_view name) -> addin {
   lmbcs::str converted = lmbcs::translate(name);
   const dmn::dhandle_t status_line = AddInCreateStatusLine(lmbcs::cast(converted));
   if (status_line == dmn::dhandle_t{}) {
-    throw dmn::error("Failed to create status line");
+    throw std::runtime_error("Failed to create status line");
   }
 
   AddInSetDefaults(module_handle, status_line);
