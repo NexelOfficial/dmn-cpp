@@ -61,3 +61,31 @@ struct note_id {
   constexpr auto data() noexcept -> value_t* { return &value; }
 };
 }  // namespace dmn
+
+// NOLINTBEGIN
+template <>
+struct std::hash<dmn::unid> {
+  auto operator()(const dmn::unid& value) const noexcept -> size_t {
+    return std::hash<uint32_t>{}(value.file[0]) ^ (std::hash<uint32_t>{}(value.file[1]) << 1) ^
+           (std::hash<uint32_t>{}(value.note[0]) << 2) ^
+           (std::hash<uint32_t>{}(value.note[1]) << 3);
+  }
+};
+
+template <>
+struct std::hash<dmn::oid> {
+  auto operator()(const dmn::oid& value) const noexcept -> size_t {
+    return std::hash<dmn::unid>{}(value.universalid) ^
+           (std::hash<uint32_t>{}(value.sequence) << 1) ^
+           (std::hash<uint32_t>{}(value.sequence_time[0]) << 2) ^
+           (std::hash<uint32_t>{}(value.sequence_time[1]) << 3);
+  }
+};
+
+template <>
+struct std::hash<dmn::note_id> {
+  auto operator()(const dmn::note_id& value) const noexcept -> size_t {
+    return std::hash<dmn::note_id::value_t>{}(value.value);
+  }
+};
+// NOLINTEND
