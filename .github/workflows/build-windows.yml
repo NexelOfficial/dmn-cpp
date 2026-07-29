@@ -1,8 +1,10 @@
 name: Build Windows
 
 on:
-  workflow_call:
   workflow_dispatch:
+  push:
+    branches:
+      - main
   pull_request:
 
 permissions:
@@ -16,7 +18,6 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: auto
 
     steps:
       - name: Checkout repository
@@ -90,7 +91,7 @@ jobs:
       - name: Upload binaries
         uses: actions/upload-artifact@v7
         with:
-          name: dmn-windows-x64
-          path: build/packages/*.zip
+          name: dmn-windows-x64-release
+          path: build/packages/**
           if-no-files-found: error
           retention-days: 7
