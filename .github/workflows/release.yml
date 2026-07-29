@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build Linux package
+    uses: ./.github/workflows/build-linux.yml
+    secrets: inherit
+
+  build-windows:
+    name: Build Windows package
+    uses: ./.github/workflows/build-windows.yml
+    secrets: inherit
+
+  release:
+    name: Create GitHub release
+    runs-on: ubuntu-24.04
+    needs:
+      - build-linux
+      - build-windows
+
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v5
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Show release files
+        run: |
+          find release-assets -maxdepth 1 -type f -print
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            release-assets/*.tar.gz \
+            release-assets/*.zip \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes
