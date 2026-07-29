@@ -7,43 +7,26 @@
 
 namespace utils {
 struct note_guard {
-  std::optional<dmn::note> value;
+  std::shared_ptr<dmn::note> value;
 
-  note_guard() = default;
-  note_guard(dmn::note note) : value(std::move(note)) {}
-
-  note_guard(const note_guard&) = delete;
-  auto operator=(const note_guard&) = delete;
-  note_guard(note_guard&&) = delete;
-  auto operator=(note_guard&&) = delete;
-
-  ~note_guard() {
-    if (!value) {
-      return;
-    }
-
-    try {
-      value->remove(true);
-    } catch (...) {
-    }
-    value.reset();
-  }
+  note_guard(dmn::note n) : value(std::make_shared<dmn::note>(std::move(n))) {}
 
   auto operator*() -> dmn::note& { return *value; }
-  auto operator*() const -> const dmn::note& { return *value; }
   auto operator->() -> dmn::note* { return &*value; }
-  auto operator->() const -> const dmn::note* { return &*value; }
 
   void release() noexcept { value.reset(); }
 };
 
-inline auto open_database(std::string_view name) -> dmn::database {
-  auto db = dmn::database::open(name);
-  if (!db) {
-    throw std::runtime_error("Failed to open Example.nsf");
-  }
-  return *db;
-}
+struct db_guard {
+  std::shared_ptr<dmn::database> value;
+
+  db_guard(dmn::database db) : value(std::make_shared<dmn::database>(std::move(db))) {}
+
+  auto operator*() -> dmn::database& { return *value; }
+  auto operator->() -> dmn::database* { return &*value; }
+
+  void release() noexcept { value.reset(); }
+};
 
 inline auto random_string(size_t len) -> std::string {
   constexpr static std::string_view RAND_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -66,5 +49,15 @@ inline auto random_small_string() -> std::string {
 inline auto random_large_string() -> std::string {
   constexpr static size_t LARGE_LEN = 0xFFFF;
   return random_string(LARGE_LEN);
+}
+
+inline auto random_database() {
+  auto name = random_small_string() + ".nsf";
+  auto db = dmn::database::create(name);
+  if (!db) {
+    throw std::runtime_error("Failed to create random database");
+  }
+  auto guard = db_guard{std::move(*db)};
+  return std::pair{std::move(guard), std::move(name)};
 }
 }  // namespace utils

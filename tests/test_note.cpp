@@ -44,14 +44,14 @@ auto create_temp_attachment() -> fs::path {
 }  // namespace
 
 TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
-  auto db = utils::open_database("Example.nsf");
-  REQUIRE(db.get_path().find("Example.nsf") != std::string::npos);
-  REQUIRE(db.try_get_handle().has_value());
+  auto [db, name] = utils::random_database();
+  REQUIRE(db->get_path().find(name) != std::string::npos);
+  REQUIRE(db->try_get_handle().has_value());
 
-  utils::note_guard primary{db.create_note()};
+  utils::note_guard primary{db->create_note()};
   REQUIRE(primary->info<dmn::info::note_id>() == dmn::note_id{});
   REQUIRE(primary->try_get_handle().has_value());
-  REQUIRE(primary->get_database().get_path().find("Example.nsf") != std::string::npos);
+  REQUIRE(primary->get_database().get_path().find(name) != std::string::npos);
 
   const std::string subject = utils::random_small_string() + "UTF-8: 🐶";
   const std::string huge_text = utils::random_large_string();
@@ -115,7 +115,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   REQUIRE(raw_numeric_value.has_value());
   REQUIRE(raw_numeric_value->try_as<double>().value() == 42.5);
 
-  const auto subject_item_value = get_item_value(db, primary->info<dmn::info::note_id>());
+  const auto subject_item_value = get_item_value(*db, primary->info<dmn::info::note_id>());
   REQUIRE(subject_item_value.has_value());
   REQUIRE(subject_item_value->is<std::string>());
   REQUIRE_FALSE(subject_item_value->empty());
@@ -159,7 +159,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   REQUIRE(parsed_unid->to_string() == string_unid);
   REQUIRE(parsed_unid == original_unid);
 
-  auto reopened_by_id = db.get_note(original_noteid);
+  auto reopened_by_id = db->get_note(original_noteid);
   REQUIRE(reopened_by_id.has_value());
   REQUIRE(reopened_by_id->info<dmn::info::note_id>() == original_noteid);
   REQUIRE(reopened_by_id->info<dmn::info::unid>() == original_unid);
@@ -167,14 +167,14 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   REQUIRE(reopened_subject.has_value());
   REQUIRE(reopened_subject.value() == replacement_subject);
 
-  auto reopened_by_unid = db.get_note(original_unid);
+  auto reopened_by_unid = db->get_note(original_unid);
   REQUIRE(reopened_by_unid.has_value());
   REQUIRE(reopened_by_unid->info<dmn::info::note_id>() == original_noteid);
   const auto reopened_numeric = reopened_by_unid->get<double>("NumericValue");
   REQUIRE(reopened_numeric.has_value());
   REQUIRE(reopened_numeric.value() == 42.5);
 
-  auto copied = primary->copy_to_database(db);
+  auto copied = primary->copy_to_database(*db);
   REQUIRE(copied.has_value());
   utils::note_guard copy{std::move(*copied)};
   REQUIRE_FALSE(copy->info<dmn::info::note_id>() == primary->info<dmn::info::note_id>());
@@ -187,7 +187,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
 
   REQUIRE_NOTHROW(primary->remove(true));
   primary.release();
-  REQUIRE_FALSE(db.get_note(original_noteid).has_value());
+  REQUIRE_FALSE(db->get_note(original_noteid).has_value());
   std::error_code ignore_ec;
   fs::remove(attachment_path, ignore_ec);
 }

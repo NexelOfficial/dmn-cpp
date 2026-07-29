@@ -1,0 +1,97 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: MSVC 2022 build
+    runs-on: windows-2022
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enable MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Verify build tools
+        shell: pwsh
+        run: |
+          cmake --version
+          aws --version
+          cl
+
+      - name: Download Domino SDK
+        shell: pwsh
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_DOMINO_OBJECT: ${{ secrets.R2_DOMINO_OBJECT }}
+        run: |
+          New-Item -ItemType Directory -Force -Path ".downloads" | Out-Null
+
+          aws s3 cp `
+            "s3://${env:R2_BUCKET}/${env:R2_DOMINO_OBJECT}" `
+            ".downloads/domino-sdk-windows.zip" `
+            --endpoint-url "https://${env:R2_ACCOUNT_ID}.r2.cloudflarestorage.com" `
+            --no-progress
+
+          if (-not (Test-Path ".downloads/domino-sdk-windows.zip")) {
+            throw "Domino SDK archive was not downloaded"
+          }
+
+      - name: Extract Domino SDK
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force `
+            -Path "third_party/domino" | Out-Null
+
+          Expand-Archive `
+            -Path ".downloads/domino-sdk-windows.zip" `
+            -DestinationPath "third_party/domino" `
+            -Force
+
+          if (-not (Test-Path "third_party/domino/include")) {
+            throw "Domino SDK include directory not found"
+          }
+
+          if (-not (Test-Path "third_party/domino/lib/notes.lib")) {
+            throw "Domino import library not found at third_party/domino/lib/notes.lib"
+          }
+
+      - name: Clone and bootstrap vcpkg
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git vcpkg
+          .\vcpkg\bootstrap-vcpkg.bat
+
+      - name: Configure, build and pack
+        shell: pwsh
+        env:
+          VCPKG_ROOT: ./vcpkg
+        run: |
+          cmake --preset win
+          cmake --build build --config Release --parallel
+          cpack --config ./build/CPackConfig.cmake -C Release
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v7
+        with:
+          name: dmn-windows-x64-release
+          path: build/packages/**
+          if-no-files-found: error
+          retention-days: 7

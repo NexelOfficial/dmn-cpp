@@ -1,0 +1,84 @@
+name: Build Linux
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: GCC 14 build
+    runs-on: ubuntu-24.04
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            ca-certificates curl gnupg ninja-build unzip \
+            build-essential gcc-14 g++-14 cmake 
+
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+          unzip -q awscliv2.zip
+          sudo ./aws/install
+
+      - name: Download Domino SDK
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_DOMINO_OBJECT: ${{ secrets.R2_DOMINO_OBJECT }}
+        run: |
+          mkdir -p .downloads
+          aws s3 cp \
+            "s3://${R2_BUCKET}/${R2_DOMINO_OBJECT}" \
+            ".downloads/domino-sdk.zip" \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+            --no-progress
+
+          test -s .downloads/domino-sdk.zip
+          unzip -t .downloads/domino-sdk.zip
+
+      - name: Extract Domino SDK
+        run: |
+          mkdir -p third_party/domino
+          unzip -q .downloads/domino-sdk.zip -d third_party/domino
+
+          test -d third_party/domino/include
+          test -f third_party/domino/lib/libnotes.so
+
+      - name: Clone and bootstrap vcpkg
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git vcpkg
+          ./vcpkg/bootstrap-vcpkg.sh
+          export VCPKG_ROOT=./vcpkg
+
+      - name: Configure and Build
+        env:
+          CC: gcc-14
+          CXX: g++-14
+          VCPKG_ROOT: ./vcpkg
+        run: |
+          cmake --preset unix
+          cmake --build build --config Release --parallel
+          cpack --config ./build/CPackConfig.cmake
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v7
+        with:
+          name: dmn-linux-x64-release
+          path: build/packages/**
+          if-no-files-found: error
+          retention-days: 7

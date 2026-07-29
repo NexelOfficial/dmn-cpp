@@ -21,7 +21,7 @@ namespace {
 struct scan_context {
   std::optional<std::regex> pattern;
   note::object_map_t objects;
-  dmn::note note;
+  dmn::note current_note;
 };
 
 // NOLINTNEXTLINE(modernize-use-trailing-return-type)

@@ -3,6 +3,8 @@
 #include <domino/global.h>
 #include <domino/misc.h>
 
+#include <stdexcept>
+
 using dmn::time_date;
 
 static_assert(sizeof(TIMEDATE) == sizeof(dmn::time_date));

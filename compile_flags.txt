@@ -3,6 +3,6 @@
 -DND64
 -Isrc
 -Iinclude
--isystemthird_party/include
+-isystemthird_party/domino/include
 -isystembuild/vcpkg_installed/x64-windows/include
 -isystembuild/vcpkg_installed/x64-linux/include

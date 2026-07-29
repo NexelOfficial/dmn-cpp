@@ -22,6 +22,20 @@ class database {
   using handle_t = dmn::dhandle_t;
   database() = delete;
 
+  /// Create a database.
+  ///
+  /// \param file New database path.
+  /// \return Opened database if it was created succesfully; otherwise an empty result indicating
+  /// the database does not exist.
+  /// \throws dmn::error If the database cannot be created or opened.
+  static auto create(std::string_view file) -> std::optional<database>;
+
+  /// Delete a database.
+  ///
+  /// \param file Database path.
+  /// \throws dmn::error If the database cannot be deleted.
+  static void remove(std::string_view file);
+
   /// Open a database.
   ///
   /// \param file Database path.

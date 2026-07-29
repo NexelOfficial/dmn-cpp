@@ -8,11 +8,11 @@
 #include "utils.hpp"
 
 TEST_CASE("a note can be persisted and reopened", "[nsf][database]") {
-  auto db = utils::open_database("Example.nsf");
+  auto [db, _] = utils::random_database();
 
   const std::string subject = "Database test subject " + utils::random_small_string();
 
-  utils::note_guard note{db.create_note()};
+  utils::note_guard note{db->create_note()};
   note->set("Subject", subject);
   note->append("Category", "database");
   note->save(true);
@@ -24,7 +24,7 @@ TEST_CASE("a note can be persisted and reopened", "[nsf][database]") {
   REQUIRE(unid.to_string().size() == 32);
 
   SECTION("reopen by note ID") {
-    const auto reopened = db.get_note(noteid);
+    const auto reopened = db->get_note(noteid);
 
     REQUIRE(reopened.has_value());
     REQUIRE(reopened->info<dmn::info::note_id>() == noteid);
@@ -37,7 +37,7 @@ TEST_CASE("a note can be persisted and reopened", "[nsf][database]") {
   }
 
   SECTION("reopen by UNID") {
-    const auto reopened = db.get_note(unid);
+    const auto reopened = db->get_note(unid);
 
     REQUIRE(reopened.has_value());
     REQUIRE(reopened->info<dmn::info::note_id>() == noteid);
@@ -46,16 +46,16 @@ TEST_CASE("a note can be persisted and reopened", "[nsf][database]") {
 }
 
 TEST_CASE("a persisted note can be found with DQL", "[nsf][database]") {
-  auto db = utils::open_database("Example.nsf");
+  auto [db, _] = utils::random_database();
 
   const std::string subject = "DQL test subject " + utils::random_small_string();
 
-  utils::note_guard note{db.create_note()};
+  utils::note_guard note{db->create_note()};
   note->set("Subject", subject);
   note->save(true);
 
   const auto noteid = note->info<dmn::info::note_id>();
-  const auto results = db.run_query(dmn::dql::eq("Subject", subject), 10);
+  const auto results = db->run_query(dmn::dql::eq("Subject", subject), 10);
 
   REQUIRE(std::ranges::any_of(results, [&](const dmn::note& item) {
     return item.info<dmn::info::note_id>() == noteid;

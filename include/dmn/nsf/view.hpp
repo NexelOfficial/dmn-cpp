@@ -18,7 +18,7 @@ class view {
     std::vector<dmn::object> columns;
   };
 
-  using function_t = std::function<void(dmn::note note, const std::vector<dmn::object>& columns)>;
+  using function_t = std::function<void(dmn::note, const std::vector<dmn::object>&)>;
   using handle_t = unsigned short;
   view() = delete;
 

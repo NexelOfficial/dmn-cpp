@@ -29,6 +29,23 @@ constexpr size_t MAX_DQL_ENTRIES = 0xffff;
 database::database(handle_t handle)
     : hdl_(std::make_shared<managed_handle_t>(handle, NSFDbClose)) {}
 
+auto database::create(std::string_view file) -> std::optional<database> {
+  (void)dmn::session::instance();
+  
+  const lmbcs::str converted = lmbcs::translate(file);
+  const dmn::status result = NSFDbCreate(lmbcs::cast(converted), DBCLASS_NOTEFILE, FALSE);
+  result.throw_if_error("Failed to create database");
+  return database::open(file, {});
+}
+
+void database::remove(std::string_view file) {
+  (void)dmn::session::instance();
+
+  const lmbcs::str converted = lmbcs::translate(file);
+  const dmn::status result = NSFDbDelete(lmbcs::cast(converted));
+  result.throw_if_error("Failed to remove database");
+}
+
 auto database::open(std::string_view file) -> std::optional<database> {
   return database::open(file, {});
 }

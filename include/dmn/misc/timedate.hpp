@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <array>
 #include <chrono>
+#include <optional>
 
 struct tagTIMEDATE;
 

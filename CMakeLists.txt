@@ -6,7 +6,7 @@ endif()
 
 project(
   dmn
-  VERSION 1.0.2
+  VERSION 1.0.3
   LANGUAGES CXX
 )
 
@@ -26,95 +26,66 @@ add_library(dmn::dmn ALIAS dmn)
 
 target_compile_features(dmn PUBLIC cxx_std_23)
 
-target_include_directories(dmn
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+target_include_directories(
+  dmn PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 if(MSVC)
   set_property(
     TARGET dmn
     PROPERTY MSVC_RUNTIME_LIBRARY
-      "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    "MultiThreaded$<$<CONFIG:Debug>:Debug>"
   )
 
-  target_compile_options(
-    dmn
-    PRIVATE
-      /utf-8
-      /Zi
-  )
+  target_compile_options(dmn PRIVATE /utf-8 /Zi)
 
-  target_link_options(
-    dmn
-    PRIVATE
-      $<$<CONFIG:Release>:/DEBUG>
-  )
+  target_link_options(dmn PRIVATE $<$<CONFIG:Release>:/DEBUG>)
 endif()
 
 if(WIN32)
   target_compile_definitions(
-    dmn
-    PRIVATE
-      W32
-      ND64
-      _WIN32_WINNT=0x0A00
+    dmn PRIVATE
+    W32 ND64 _WIN32_WINNT=0x0A00
   )
 
   add_library(notes::notes STATIC IMPORTED)
 
-  set_target_properties(notes::notes PROPERTIES
-    IMPORTED_LOCATION
-      "${CMAKE_CURRENT_SOURCE_DIR}/third_party/lib/notes.lib"
-
-    INTERFACE_INCLUDE_DIRECTORIES
-      "${CMAKE_CURRENT_SOURCE_DIR}/third_party/include"
-  )
-
-  set_target_properties(dmn PROPERTIES
+  set_target_properties(
+    dmn PROPERTIES
     WINDOWS_EXPORT_ALL_SYMBOLS ON
   )
 elseif(UNIX AND NOT APPLE)
   target_compile_definitions(
-    dmn
-    PRIVATE
-      UNIX
-      LINUX
-      LINUX64
-  )
-
-  if(NOT DEFINED ENV{Notes_ExecDirectory})
-    message(FATAL_ERROR
-      "Notes_ExecDirectory must point to the Notes installation"
-    )
-  endif()
-
-  find_library(
-    NOTES_LIBRARY
-    NAMES notes libnotes.so
-    HINTS "$ENV{Notes_ExecDirectory}"
-    NO_DEFAULT_PATH
-    REQUIRED
+    dmn PRIVATE
+    UNIX LINUX LINUX64
   )
 
   add_library(notes::notes SHARED IMPORTED)
-
-  set_target_properties(notes::notes PROPERTIES
-    IMPORTED_LOCATION "${NOTES_LIBRARY}"
-    INTERFACE_INCLUDE_DIRECTORIES
-      "${CMAKE_CURRENT_SOURCE_DIR}/third_party/include"
-  )
 endif()
+
+find_library(
+  NOTES_LIBRARY
+  NAMES notes
+  HINTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/domino/lib"
+  NO_DEFAULT_PATH
+  REQUIRED
+)
+
+set_target_properties(notes::notes PROPERTIES
+  IMPORTED_LOCATION "${NOTES_LIBRARY}"
+  INTERFACE_INCLUDE_DIRECTORIES
+  "${CMAKE_CURRENT_SOURCE_DIR}/third_party/domino/include"
+)
 
 target_link_libraries(dmn PRIVATE notes::notes)
 
 set_target_properties(
-  dmn
-  PROPERTIES
-    VERSION "${PROJECT_VERSION}"
-    SOVERSION "${PROJECT_VERSION_MAJOR}"
-    EXPORT_NAME dmn
+  dmn PROPERTIES
+  VERSION "${PROJECT_VERSION}"
+  SOVERSION "${PROJECT_VERSION_MAJOR}"
+  EXPORT_NAME dmn
 )
 
 install(
@@ -151,10 +122,10 @@ write_basic_package_version_file(
 
 install(
   FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/dmnConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/dmnConfigVersion.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/dmnConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/dmnConfigVersion.cmake"
   DESTINATION
-    "${CMAKE_INSTALL_LIBDIR}/cmake/dmn"
+  "${CMAKE_INSTALL_LIBDIR}/cmake/dmn"
 )
 
 set(CPACK_PACKAGE_NAME "dmn")
@@ -179,5 +150,5 @@ include(CPack)
 include(CTest)
 
 if(BUILD_TESTING)
-    add_subdirectory(tests)
+  add_subdirectory(tests)
 endif()

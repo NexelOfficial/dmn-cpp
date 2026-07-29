@@ -11,8 +11,8 @@
 #include "utils.hpp"
 
 TEST_CASE("object conversion coverage", "[nos][object]") {
-  auto db = utils::open_database("Example.nsf");
-  utils::note_guard note{db.create_note()};
+  auto [db, _] = utils::random_database();
+  utils::note_guard note{db->create_note()};
 
   dmn::list tags{};
   tags.push_back("alpha");
