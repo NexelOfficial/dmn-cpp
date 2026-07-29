@@ -1,8 +1,10 @@
 name: Build Linux
 
 on:
-  workflow_call:
   workflow_dispatch:
+  push:
+    branches:
+      - main
   pull_request:
 
 permissions:
@@ -73,10 +75,10 @@ jobs:
           cmake --build build --config Release --parallel
           cpack --config ./build/CPackConfig.cmake
 
-      - name: Upload package
+      - name: Upload binaries
         uses: actions/upload-artifact@v7
         with:
-          name: dmn-linux-x64
-          path: build/packages/*.tar.gz
+          name: dmn-linux-x64-release
+          path: build/packages/**
           if-no-files-found: error
           retention-days: 7
