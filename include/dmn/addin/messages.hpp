@@ -3,7 +3,7 @@
 #include <string>
 #include <optional>
 
-#include "dmn/os/uhandle.hpp"
+#include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
 class addin;
@@ -31,7 +31,7 @@ class messages {
   [[nodiscard]] auto get_message() const -> std::optional<std::string>;
 
  private:
-  dmn::uhandle<handle_t> hdl_;
+  detail::uhandle<handle_t> hdl_;
 
   messages(handle_t handle);
 };

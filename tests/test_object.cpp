@@ -4,10 +4,10 @@
 #include <string>
 #include <string_view>
 
-#include "dmn/nos/list.hpp"
-#include "dmn/nos/object.hpp"
-#include "dmn/nos/type.hpp"
-#include "dmn/nsf/note.hpp"
+#include "dmn/object.hpp"
+#include "dmn/list.hpp"
+#include "dmn/type.hpp"
+#include "dmn/note.hpp"
 #include "utils.hpp"
 
 TEST_CASE("object conversion coverage", "[nos][object]") {

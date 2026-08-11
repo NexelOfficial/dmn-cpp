@@ -11,12 +11,12 @@
 #include <string_view>
 #include <utility>
 
-#include "dmn/misc/error.hpp"
-#include "dmn/misc/unid.hpp"
-#include "dmn/nos/list.hpp"
-#include "dmn/nsf/database.hpp"
-#include "dmn/nos/object.hpp"
-#include "dmn/nsf/note.hpp"
+#include "dmn/database.hpp"
+#include "dmn/object.hpp"
+#include "dmn/error.hpp"
+#include "dmn/unid.hpp"
+#include "dmn/list.hpp"
+#include "dmn/note.hpp"
 #include "utils.hpp"
 
 namespace fs = std::filesystem;

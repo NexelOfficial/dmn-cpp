@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <string>
 
-#include "dmn/misc/dql.hpp"
-#include "dmn/nsf/database.hpp"
+#include "dmn/database.hpp"
+#include "dmn/dql.hpp"
 #include "utils.hpp"
 
 TEST_CASE("a note can be persisted and reopened", "[nsf][database]") {

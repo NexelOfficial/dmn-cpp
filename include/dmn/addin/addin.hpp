@@ -5,7 +5,7 @@
 #include <functional>
 #include <string>
 
-#include "dmn/os/uhandle.hpp"
+#include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
 class addin {
@@ -75,11 +75,11 @@ class addin {
   static std::mutex mtx;
   static inline std::optional<std::string> prefix_;
 
-  dmn::uhandle<dmn::dhandle_t> status_hdl_;
+  detail::uhandle<detail::dhandle_t> status_hdl_;
 
   /// Internal implementation used by `dmn::addin::log`.
   static void log_impl(const std::string& text);
 
-  addin(dmn::dhandle_t handle);
+  addin(detail::dhandle_t handle);
 };
 }  // namespace dmn

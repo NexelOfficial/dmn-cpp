@@ -3,7 +3,7 @@
 #include <optional>
 #include <random>
 
-#include "dmn/nsf/note.hpp"
+#include "dmn/note.hpp"
 
 namespace utils {
 struct note_guard {

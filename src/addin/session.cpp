@@ -3,7 +3,7 @@
 #include <domino/global.h>
 #include <domino/osmisc.h>
 
-#include "dmn/misc/error.hpp"
+#include "dmn/error.hpp"
 
 using dmn::session;
 using dmn::thread;
@@ -14,7 +14,6 @@ session::session() {
 }
 
 session::~session() { NotesTerm(); }
-
 
 thread::thread() {
   const dmn::status result = NotesInitThread();

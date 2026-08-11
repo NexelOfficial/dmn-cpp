@@ -7,7 +7,7 @@
 #include <format>
 #include <utility>
 
-#include "dmn/misc/error.hpp"
+#include "dmn/error.hpp"
 
 using dmn::mime;
 
@@ -28,7 +28,7 @@ auto mime::append_content(std::string content) -> mime& {
   return *this;
 }
 
-auto mime::open_impl(dmn::dhandle_t handle) -> handle_t {
+auto mime::open_impl(detail::dhandle_t handle) -> handle_t {
   handle_t mime_hdl = {};
   const dmn::status result = MIMEStreamOpen(handle, nullptr, 0, MIME_STREAM_OPEN_WRITE, &mime_hdl);
   result.throw_if_error("Failed to open MIME stream");
@@ -36,7 +36,7 @@ auto mime::open_impl(dmn::dhandle_t handle) -> handle_t {
   return mime_hdl;
 }
 
-void mime::write_to_impl(dmn::dhandle_t handle, std::string field) const {
+void mime::write_to_impl(detail::dhandle_t handle, std::string field) const {
   write_line(std::format("Content-Type: {}; charset={}", content_type_, charset_));
   write_line("Content-Transfer-Encoding: 8bit");
   write_line("");

@@ -5,17 +5,17 @@
 #include <domino/acl.h>
 #include <domino/nsf.h>
 
-#include "dmn/misc/error.hpp"
-#include "dmn/os/uhandle.hpp"
-#include "dmn/os/lmbcs.hpp"
-#include "dmn/os/locker.hpp"
+#include "dmn/detail/uhandle.hpp"
+#include "dmn/detail/locker.hpp"
+#include "dmn/detail/lmbcs.hpp"
+#include "dmn/error.hpp"
 
 using dmn::acl::names;
 
 names::names() { buffer_.resize(sizeof(NAMES_LIST)); }
 
 auto names::from_username(const std::string& name) -> names {
-  dmn::dhandle_t handle = {};
+  detail::dhandle_t handle = {};
   lmbcs::str converted = lmbcs::translate(name);
   dmn::status result = NSFBuildNamesList(lmbcs::cast(converted), 0, &handle);
   result.throw_if_error("Failed to build names list");
@@ -24,7 +24,7 @@ auto names::from_username(const std::string& name) -> names {
   result = OSMemGetSize(handle, &names_size);
   result.throw_if_error("Failed to determine names size");
 
-  auto names_obj = dmn::os::locker(handle);
+  auto names_obj = detail::locker(handle);
 
   names out{};
   out.buffer_.resize(names_size);

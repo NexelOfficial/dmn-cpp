@@ -4,8 +4,9 @@
 #include <cstddef>
 #include <optional>
 #include <string>
-#include "dmn/nos/list.hpp"
-#include "dmn/os/uhandle.hpp"
+
+#include "dmn/detail/uhandle.hpp"
+#include "dmn/list.hpp"
 
 namespace dmn {
 
@@ -57,11 +58,11 @@ class mail {
   /// \throws std::runtime_error If no recipients were added to the mail.
   void send(const std::string& from, const std::string& subject);
 
-  [[nodiscard]] auto get_handle() const -> dmn::dhandle_t { return msg_hdl_.get(); }
+  [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return msg_hdl_.get(); }
 
  private:
-  dmn::uhandle<dmn::dhandle_t> file_hdl_;
-  dmn::uhandle<dmn::dhandle_t> msg_hdl_;
+  detail::uhandle<detail::dhandle_t> file_hdl_;
+  detail::uhandle<detail::dhandle_t> msg_hdl_;
 
   dmn::list send_to_;
   dmn::list copy_to_;

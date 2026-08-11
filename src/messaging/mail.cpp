@@ -8,8 +8,8 @@
 #include <cstring>
 
 #include "dmn/messaging/mime.hpp"
-#include "dmn/os/lmbcs.hpp"
-#include "dmn/misc/error.hpp"
+#include "dmn/detail/lmbcs.hpp"
+#include "dmn/error.hpp"
 
 using dmn::mail;
 
