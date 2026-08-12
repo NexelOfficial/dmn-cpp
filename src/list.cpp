@@ -6,7 +6,6 @@
 #include <domino/nsfnote.h>
 
 #include <limits>
-#include <stdexcept>
 
 #include "dmn/detail/lmbcs.hpp"
 #include "dmn/detail/locker.hpp"
@@ -19,18 +18,24 @@ constexpr uint16_t MAX_UINT16 = std::numeric_limits<uint16_t>::max();
 list::list() : hdl_(OSMemFree) {
   const dmn::status result = ListAllocate(0, 0, TRUE, hdl_.data(), nullptr, &size_);
   result.throw_if_error("Failed to allocate list");
-  OSUnlock(hdl_.get());
+  auto hdl = hdl_.try_get();
+  if (hdl) {
+    OSUnlock(*hdl);
+  }
 }
 
 list::list(void* existing) : hdl_(OSMemFree) {
   const uint16_t type = *static_cast<uint16_t*>(existing);
   if (type != TYPE_TEXT_LIST) {
-    throw std::invalid_argument("Provided pointer is not of a text list");
+    throw dmn::invalid_argument("Provided pointer is not a text list");
   }
 
   const dmn::status result = ListDuplicate(static_cast<LIST*>(existing), TRUE, hdl_.data());
   result.throw_if_error("Failed to duplicate list");
-  OSUnlock(hdl_.get());
+  auto hdl = hdl_.try_get();
+  if (hdl) {
+    OSUnlock(*hdl);
+  }
 }
 
 auto list::empty() const -> bool { return size() == 0; }
@@ -47,7 +52,7 @@ auto list::buffer_size() const -> uint16_t {
 
 auto list::at(size_t index) const -> std::string {
   if (index >= size()) {
-    throw std::out_of_range("List index is out of range");
+    throw dmn::out_of_range("List index is out of range");
   }
 
   char* text = nullptr;
@@ -64,11 +69,11 @@ void list::push_back(const std::string& value) {
   const dmn::lmbcs::str converted = dmn::lmbcs::translate(value);
   const size_t value_len = converted.size();
   if (value_len > MAX_UINT16) {
-    throw std::out_of_range("Text list entry too large");
+    throw dmn::out_of_range("Text list entry too large");
   }
   const size_t count = size();
   if (count > MAX_UINT16) {
-    throw std::out_of_range("Text list has too many entries");
+    throw dmn::out_of_range("Text list has too many entries");
   }
 
   const dmn::status result =
@@ -79,7 +84,7 @@ void list::push_back(const std::string& value) {
 void list::pop_back() {
   const size_t count = size();
   if (count == 0) {
-    throw std::out_of_range("List is empty");
+    throw dmn::out_of_range("List is empty");
   }
 
   erase(count - 1);
@@ -87,7 +92,7 @@ void list::pop_back() {
 
 void list::erase(size_t index) {
   if (index >= size()) {
-    throw std::out_of_range("List index is out of range");
+    throw dmn::out_of_range("List index is out of range");
   }
 
   const dmn::status result = ListRemoveEntry(hdl_.get(), TRUE, &size_, index);

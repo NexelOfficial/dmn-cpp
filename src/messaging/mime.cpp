@@ -53,7 +53,7 @@ void mime::write_to_impl(detail::dhandle_t handle, std::string field) const {
 void mime::write_line(std::string line) const {
   const int error = MIMEStreamPutLine(line.data(), hdl_.get());
   if (error != MIME_STREAM_SUCCESS) {
-    throw std::runtime_error("Failed to append line to mime stream");
+    throw dmn::mime_error::make("Failed to append line to mime stream", error);
   }
 }
 

@@ -13,7 +13,7 @@ using dmn::note_lock;
 auto note_lock::acquire(dmn::database db, dmn::note_id noteid) -> note_lock {
   const dmn::status result = lock_note(db.get_handle(), noteid);
   if (result.is_locked()) {
-    throw dmn::error("Note is already locked", result);
+    throw dmn::native_error("Note is already locked", result);
   }
   result.throw_if_error("Failed to acquire lock");
 

@@ -38,71 +38,70 @@ class list {
 
   /// Create an empty text list in memory.
   ///
-  /// \throws dmn::error If allocating the list fails.
+  /// \throws dmn::native_error If allocating the list fails.
   list();
 
   /// Create an in-memory text list from an existing one.
   ///
   /// \param existing Pointer to an existing list prefixed by data type.
-  /// \throws dmn::error If allocating the list fails.
-  /// \throws std::runtime_error If the underlying handle is empty.
-  /// \throws std::invalid_argument If the provided pointer is not of a text list.
+  /// \throws dmn::native_error If allocating the list fails.
+  /// \throws dmn::invalid_argument If the provided pointer is not of a text list.
   list(void* existing);
 
   /// Check whether the list contains no entries.
   ///
   /// \return true if the list is empty, otherwise false.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto empty() const -> bool;
 
   /// Get the number of entries in the list.
   ///
   /// \return Number of text entries.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto size() const -> size_t;
 
   /// Get the raw Domino list size.
   ///
   /// \return Size of the list buffer in bytes.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto buffer_size() const -> uint16_t;
 
   /// Get an entry by index.
   ///
   /// \param index Zero-based entry index.
   /// \return Entry at the provided index.
-  /// \throws dmn::error If the entry cannot be retrieved.
-  /// \throws std::out_of_range If the index is outside the list.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the entry cannot be retrieved.
+  /// \throws dmn::out_of_range If the index is outside the list.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto at(size_t index) const -> std::string;
 
   /// Append an entry to the list.
   ///
   /// \param value Entry to add. The value is converted from UTF-8 to LMBCS.
-  /// \throws dmn::error If the entry cannot be added.
-  /// \throws std::out_of_range If the entry is too large for a Domino text list.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the entry cannot be added.
+  /// \throws dmn::out_of_range If the entry is too large for a Domino text list.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void push_back(const std::string& value);
 
   /// Remove the last entry from the list.
   ///
-  /// \throws dmn::error If the entry cannot be removed.
-  /// \throws std::out_of_range If the list is empty.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the entry cannot be removed.
+  /// \throws dmn::out_of_range If the list is empty.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void pop_back();
 
   /// Remove the entry at an index.
   ///
   /// \param index Zero-based entry index.
-  /// \throws dmn::error If the entry cannot be removed.
-  /// \throws std::out_of_range If the index is outside the list.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the entry cannot be removed.
+  /// \throws dmn::out_of_range If the index is outside the list.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void erase(size_t index);
 
   /// Remove all entries from the list.
   ///
-  /// \throws dmn::error If the list cannot be cleared.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the list cannot be cleared.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void clear();
 
   /// Release the list handle.

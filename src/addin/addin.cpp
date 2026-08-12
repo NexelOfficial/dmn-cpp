@@ -5,7 +5,6 @@
 #include <domino/osmisc.h>
 
 #include <exception>
-#include <stdexcept>
 
 #include "dmn/addin/session.hpp"
 #include "dmn/addin/messages.hpp"
@@ -26,7 +25,7 @@ auto addin::create(std::string_view name) -> addin {
   lmbcs::str converted = lmbcs::translate(name);
   const detail::dhandle_t status_line = AddInCreateStatusLine(lmbcs::cast(converted));
   if (status_line == detail::dhandle_t{}) {
-    throw std::runtime_error("Failed to create status line");
+    throw dmn::runtime_error("Failed to create status line");
   }
 
   AddInSetDefaults(module_handle, status_line);
@@ -52,7 +51,7 @@ auto addin::day_elapsed() -> bool { return AddInDayHasElapsed() != FALSE; }
 
 void addin::enter_loop(const function_t& callback) const {
   if (!status_hdl_) {
-    throw std::runtime_error("Status line or message queue invalid");
+    throw dmn::invalid_handle("Status line or message queue invalid");
   }
 
   const std::scoped_lock lock(mtx);

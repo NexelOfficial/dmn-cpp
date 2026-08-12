@@ -27,8 +27,8 @@ class note_lock {
   /// \param db Database containing the note to lock.
   /// \param noteid Note ID of the note to lock.
   /// \return A note_lock instance owning the acquired lock.
-  /// \throws dmn::error If the note is already locked or can't be acquired.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the note is already locked or can't be acquired.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] static auto acquire(dmn::database db, dmn::note_id noteid) -> note_lock;
 
   /// Try to acquire an exclusive lock for a note.
@@ -47,8 +47,8 @@ class note_lock {
 
   /// Release the owned note lock.
   ///
-  /// \throws dmn::error If the note cannot be unlocked.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the note cannot be unlocked.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void unlock();
 
  private:

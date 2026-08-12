@@ -18,7 +18,7 @@ class mail {
   ///
   /// \param mail_name Path or name of the mail message file.
   /// \return Instance of `dmn::main`.
-  /// \throws dmn::error If the message file cannot be opened or created.
+  /// \throws dmn::native_error If the message file cannot be opened or created.
   static auto create(const std::optional<std::string>& name) -> mail;
 
   /// Set the message body.
@@ -28,8 +28,8 @@ class mail {
   ///
   /// \param body Message body content.
   /// \param content_type MIME content type to use.
-  /// \throws dmn::error If the MIME content cannot be created or written.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the MIME content cannot be created or written.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void set_body(const std::string& body, const std::optional<std::string>& content_type) const;
 
   /// Add a primary recipient.
@@ -54,8 +54,8 @@ class mail {
   ///
   /// \param from Sender email address.
   /// \param subject Message subject.
-  /// \throws dmn::error If the sending process failed.
-  /// \throws std::runtime_error If no recipients were added to the mail.
+  /// \throws dmn::native_error If the sending process failed.
+  /// \throws dmn::runtime_error If no recipients were added to the mail.
   void send(const std::string& from, const std::string& subject);
 
   [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return msg_hdl_.get(); }

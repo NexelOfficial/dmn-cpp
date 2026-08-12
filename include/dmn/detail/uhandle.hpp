@@ -3,8 +3,9 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
-#include <stdexcept>
 #include <utility>
+
+#include "dmn/error.hpp"
 
 namespace dmn::detail {
 using dhandle_t = uint32_t;
@@ -79,10 +80,10 @@ class uhandle {
 
   /// Get the raw managed handle.
   ///
-  /// \throws std::runtime_error If the managed handle is null.
+  /// \throws dmn::invalid_handle If the managed handle is null.
   [[nodiscard]] auto get() const -> T {
     if (hdl_ == null_value()) {
-      throw std::runtime_error("Empty handle accessed");
+      throw dmn::invalid_handle("Empty handle accessed");
     }
 
     return hdl_;
@@ -105,4 +106,4 @@ class uhandle {
   T hdl_ = null_value();
   cleanup_t cleanup;
 };
-}  // namespace dmn
+}  // namespace dmn::detail

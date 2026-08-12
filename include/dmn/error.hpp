@@ -1,5 +1,6 @@
 #pragma once
 
+#include <exception>
 #include <optional>
 #include <string>
 
@@ -32,40 +33,64 @@ struct status {
   /// Throw the status as a `dmn::error` if it is an error.
   ///
   /// \param message Descriptive error message
-  /// \throws dmn::error If the status is an error.
+  /// \throws dmn::native_error If the status is an error.
   void throw_if_error(const char* message) const;
 };
 
-constexpr static status no_error = status(0);
+constexpr static status no_error{0};
 
-class error : public std::exception {
- public:
-  explicit error(const char* message, status code);
+struct error : std::exception {
+  using std::exception::exception;
+};
 
-  /// Get the final error message.
-  [[nodiscard]] auto what() const noexcept -> const char* override { return message_.c_str(); }
+struct invalid_handle : error {
+  using error::error;
+};
+
+struct invalid_argument : error {
+  using error::error;
+};
+
+struct conversion_error : error {
+  using error::error;
+};
+
+struct runtime_error : error {
+  using error::error;
+};
+
+struct out_of_range : error {
+  using error::error;
+};
+
+struct native_error : error {
+  explicit native_error(const char* message, status code);
 
   /// Get the raw error code.
   [[nodiscard]] auto code() const noexcept -> status { return code_; }
 
  private:
   status code_;
-  std::string message_;
 
   /// Loads the error message for a code.
-  ///
-  /// \param code Code to load the message for.
-  /// \return Error message for \p code , if available.
   [[nodiscard]] static auto os_load_string(status code) -> std::optional<lmbcs::str>;
 
   /// Get the error message for a code.
-  ///
-  /// Tries to load the error message for the provided code. If the message for the code could not
-  /// be loaded, the code is converted to a hexadecimal string instead.
-  ///
-  /// \param code Code to get a message for.
-  /// \return Error message for \p code if it exists, the code as a hex-string otherwise.
-  [[nodiscard]] static auto get_error_message(status code) -> std::string;
+  [[nodiscard]] static auto get_error_message(std::string message, status code) -> std::string;
 };
 
+struct mime_error : error {
+  using error::error;
+
+  /// Make a variant of `dmn::mime_error` using its code.
+  static auto make(const char* message, int code) -> dmn::mime_error;
+};
+
+struct mime_io_error : mime_error {
+  using mime_error::mime_error;
+};
+
+struct mime_eos_error : mime_error {
+  using mime_error::mime_error;
+};
 }  // namespace dmn

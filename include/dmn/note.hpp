@@ -32,65 +32,65 @@ class note {
   ///
   /// \param key Item to look up.
   /// \return true if the item exists; otherwise false.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto has(std::string_view key) const -> bool;
 
   /// Copy this note to another database.
   ///
   /// \param db Target database.
   /// \return Copy of the note in the target database.
-  /// \throws dmn::error If the note cannot be copied.
-  /// \throws std::runtime_error If the new note doesn't have a note id.
-  /// \throws std::runtime_error If an underlying handle is empty.
+  /// \throws dmn::native_error If the note cannot be copied.
+  /// \throws dmn::runtime_error If the new note doesn't have a note id.
+  /// \throws dmn::invalid_handle If an underlying handle is empty.
   [[nodiscard]] auto copy_to_database(const dmn::database& db) const -> std::optional<note>;
 
   /// Get the type of an item.
   ///
   /// \param key Item name to get the type for
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto get_type(std::string_view key) const -> dmn::type;
 
   /// Erase an item from the note.
   ///
   /// \param key Item name to erase.
-  /// \throws dmn::error If the item cannot be erased.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the item cannot be erased.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void erase(std::string_view key) const;
 
   /// Embed a file attachment in the note.
   ///
   /// \param name Attachment name stored in the note.
   /// \param path Path to the file to attach.
-  /// \throws dmn::error If the attachment cannot be embedded.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the attachment cannot be embedded.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void embed_element(const std::string& name, const std::string& path) const;
 
   /// Embed a file attachment in the note with a random name.
   ///
   /// \param path Path to the file to attach.
-  /// \throws dmn::error If the attachment cannot be embedded.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the attachment cannot be embedded.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   /// \note File extension of the provided path is preserved.
   void embed_element(const std::string& path) const;
 
   /// Compute the note using its associated form.
   ///
-  /// \throws dmn::error If form computation fails.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If form computation fails.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void compute_with_form() const;
 
   /// Save the note to the database.
   ///
   /// \param force Whether to force the update.
-  /// \throws dmn::error If the note cannot be saved.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the note cannot be saved.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void save(bool force) const;
 
   /// Delete the note from the database.
   ///
   /// \param force Whether to force the deletion.
-  /// \throws dmn::error If the note cannot be deleted.
-  /// \throws std::runtime_error If an underlying handle is empty.
+  /// \throws dmn::native_error If the note cannot be deleted.
+  /// \throws dmn::invalid_handle If an underlying handle is empty.
   void remove(bool force) const;
 
   /// Collect all items of the note to a map.
@@ -103,8 +103,9 @@ class note {
   ///
   /// \param key Item name.
   /// \param value Value to set.
-  /// \throws dmn::error If the existing item cannot be removed or the new value cannot be stored.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the existing item cannot be removed or the new value cannot be
+  /// stored.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   template <typename T>
   void set(std::string_view key, const T& value) const {
     if (!has(key)) {
@@ -118,7 +119,7 @@ class note {
   ///
   /// \param key Item name to retrieve.
   /// \return Retrieved item, if available.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   /// \note When getting the item as a string, all non-string types are converted to string
   /// automatically thus the type is not checked.
   template <typename T>
@@ -144,7 +145,7 @@ class note {
   /// Get information about the note.
   ///
   /// \return Retrieved information
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   template <dmn::info Info>
   [[nodiscard]] auto info() const {
     if constexpr (Info == dmn::info::note_id) {

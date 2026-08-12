@@ -26,22 +26,22 @@ class view {
   ///
   /// \param key Key to search for.
   /// \param func Iteration function to call.
-  /// \throws dmn::error If the view search fails.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the view search fails.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void iterate(std::string_view key, const function_t& func) const;
 
   /// Get all entries in the view.
   ///
   /// \return Entries contained in the view.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto get_entries() const -> std::vector<entry>;
 
   /// Get entries matching a key.
   ///
   /// \param key Key to search for.
   /// \return Matching view entries. Returns an empty vector if no matches are found.
-  /// \throws dmn::error If the view search fails.
-  /// \throws std::runtime_error If the underlying handle is empty.
+  /// \throws dmn::native_error If the view search fails.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto get_entries(std::string_view key) const -> std::vector<entry>;
 
   [[nodiscard]] auto get_handle() const -> handle_t { return hdl_.get(); }

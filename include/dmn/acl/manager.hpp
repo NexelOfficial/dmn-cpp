@@ -13,7 +13,7 @@ class manager {
   ///
   /// \param names Names list to evaluate.
   /// \return Effective ACL access level.
-  /// \throws dmn::error If the access lookup fails or the ACL is corrupt.
+  /// \throws dmn::native_error If the access lookup fails or the ACL is corrupt.
   [[nodiscard]] auto lookup_access(dmn::acl::names& names) const -> uint16_t;
 
   [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return hdl_.get(); }

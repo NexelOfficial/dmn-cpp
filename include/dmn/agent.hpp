@@ -21,9 +21,9 @@ class agent {
   /// \param note Note to use as the agent context.
   /// \return Captured agent output. Returns an empty string if the agent produces no output, or an
   /// empty result if the output cannot be retrieved.
-  /// \throws dmn::error If the run context cannot be created, the document context cannot be set,
-  /// output redirection fails, or agent execution fails.
-  /// \throws std::runtime_error If the underlying agent handle is empty.
+  /// \throws dmn::native_error If the run context cannot be created, the document context cannot be
+  /// set, output redirection fails, or agent execution fails.
+  /// \throws dmn::invalid_handle If the underlying agent handle is empty.
   [[nodiscard]] auto run(const std::optional<dmn::note>& note) const -> std::optional<std::string>;
 
  private:

@@ -3,14 +3,15 @@
 #include <algorithm>
 #include <ranges>
 #include <cctype>
-#include <stdexcept>
 #include <type_traits>
 #include <utility>
+
+#include "dmn/error.hpp"
 
 namespace dmn {
 auto dql::datetime(std::string value) -> date_time {
   if (value.empty()) {
-    throw std::invalid_argument("DQL datetime value cannot be empty");
+    throw dmn::invalid_argument("DQL datetime value cannot be empty");
   }
 
   return {std::move(value)};
@@ -47,7 +48,7 @@ auto dql::contains(std::string field, std::string text) -> expression {
   validate_field(field);
 
   if (text.empty()) {
-    throw std::invalid_argument("DQL contains text cannot be empty");
+    throw dmn::invalid_argument("DQL contains text cannot be empty");
   }
 
   return {
@@ -59,7 +60,7 @@ auto dql::contains(std::string field, std::string text) -> expression {
 
 auto dql::all(std::vector<expression> terms) -> expression {
   if (terms.empty()) {
-    throw std::invalid_argument("DQL all() requires at least one expression");
+    throw dmn::invalid_argument("DQL all() requires at least one expression");
   }
 
   return {
@@ -70,7 +71,7 @@ auto dql::all(std::vector<expression> terms) -> expression {
 
 auto dql::any(std::vector<expression> terms) -> expression {
   if (terms.empty()) {
-    throw std::invalid_argument("DQL any() requires at least one expression");
+    throw dmn::invalid_argument("DQL any() requires at least one expression");
   }
 
   return {
@@ -95,20 +96,20 @@ auto dql::render(const expression& expr) -> std::string {
 
     case expression::oper::logical_not:
       if (expr.children.size() != 1) {
-        throw std::invalid_argument("DQL not expression requires exactly one child");
+        throw dmn::invalid_argument("DQL not expression requires exactly one child");
       }
 
       return "not " + render(expr.children.front());
 
     case expression::oper::raw:
       if (expr.raw.empty()) {
-        throw std::invalid_argument("DQL raw expression cannot be empty");
+        throw dmn::invalid_argument("DQL raw expression cannot be empty");
       }
 
       return expr.raw;
   }
 
-  throw std::logic_error("Unknown DQL expression kind");
+  throw dmn::invalid_argument("Unknown DQL expression kind");
 }
 
 auto dql::comparison(std::string field, std::string op, value_t value) -> expression {
@@ -124,7 +125,7 @@ auto dql::comparison(std::string field, std::string op, value_t value) -> expres
 
 void dql::validate_field(std::string_view field) {
   if (!is_valid_identifier(field)) {
-    throw std::invalid_argument("Invalid DQL field identifier: " + std::string(field));
+    throw dmn::invalid_argument("Invalid DQL field identifier provided");
   }
 }
 
@@ -159,7 +160,7 @@ auto dql::render_value(const value_t& value) -> std::string {
         return dql::quote(item);
       } else if constexpr (std::is_same_v<T, const char*>) {
         if (item == nullptr) {
-          throw std::invalid_argument("DQL string value cannot be null");
+          throw dmn::invalid_argument("DQL string value cannot be null");
         }
 
         return dql::quote(std::string_view(item));
@@ -227,7 +228,7 @@ auto dql::render_double(double value) -> std::string {
 auto dql::render_joined(const std::vector<expression>& children, std::string_view op)
   -> std::string {
   if (children.empty()) {
-    throw std::invalid_argument("DQL group expression cannot be empty");
+    throw dmn::invalid_argument("DQL group expression cannot be empty");
   }
 
   std::string out;

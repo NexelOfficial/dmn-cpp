@@ -7,7 +7,7 @@ Checks:
   - performance-*
   - bugprone-*
   - misc-*
-  # Domino C-api and Lua have many c-style vararg functions
+  # Domino C-api has many c-style vararg functions
   - -cppcoreguidelines-pro-type-vararg
   # const_cast is required for certain Domino C-api conversions
   - -cppcoreguidelines-pro-type-const-cast
@@ -15,6 +15,8 @@ Checks:
   - -cppcoreguidelines-pro-type-reinterpret-cast
   # Short identifiers are cleaner in certain contexts
   - -readability-identifier-length
+  # Some template functions are very complex
+  - -readability-function-cognitive-complexity
   # Some members are ofter exposed intentionally
   - -misc-non-private-member-variables-in-classes
   # Clutters the include tree with headers

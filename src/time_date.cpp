@@ -3,7 +3,7 @@
 #include <domino/global.h>
 #include <domino/misc.h>
 
-#include <stdexcept>
+#include "dmn/error.hpp"
 
 using dmn::time_date;
 
@@ -17,7 +17,7 @@ auto time_date::from_time_point(std::chrono::system_clock::time_point tp)
   const auto day_point = floor<days>(hundredths);
   const year_month_day ymd{day_point};
   if (!ymd.ok()) {
-    throw std::out_of_range("Date is outside the calendar range");
+    throw dmn::out_of_range("Date is outside the calendar range");
   }
 
   const auto time_of_day = hundredths - day_point;

@@ -7,8 +7,11 @@
 #include <domino/oserr.h>
 #include <domino/nsferr.h>
 #include <domino/osmisc.h>
+#include <domino/nsfdata.h>
+#include <domino/mime.h>
 
-using dmn::error;
+using dmn::mime_error;
+using dmn::native_error;
 using dmn::status;
 
 static_assert(sizeof(dmn::status::value) == sizeof(STATUS));
@@ -30,14 +33,26 @@ auto status::is_error() const noexcept -> bool { return value != dmn::no_error.v
 
 void status::throw_if_error(const char* message) const {
   if (is_error()) {
-    throw dmn::error(message, *this);
+    throw dmn::native_error(message, *this);
   }
 }
 
-error::error(const char* message, status code)
-    : code_(code), message_(std::format("{}: {}", message, get_error_message(code))) {}
+auto mime_error::make(const char* message, int code) -> dmn::mime_error {
+  switch (code) {
+    case MIME_STREAM_IO:
+      return dmn::mime_io_error{message};
+    case MIME_STREAM_EOS:
+      return dmn::mime_eos_error{message};
+    default:
+      return dmn::mime_error{message};
+  }
+}
 
-auto error::os_load_string(status code) -> std::optional<lmbcs::str> {
+native_error::native_error(const char* message, status code)
+    : code_(code),
+      error(std::format("{}: {}", message, get_error_message(message, code)).c_str()) {}
+
+auto native_error::os_load_string(status code) -> std::optional<lmbcs::str> {
   lmbcs::str buffer(MAX_MESSAGE_SIZE, '\0');
   const uint16_t out_size = OSLoadString(
     WHANDLE{}, ERR(code.value), reinterpret_cast<char*>(buffer.data()), buffer.size() - 1
@@ -50,13 +65,13 @@ auto error::os_load_string(status code) -> std::optional<lmbcs::str> {
   return buffer;
 }
 
-auto error::get_error_message(status code) -> std::string {
-  std::string hex_code = std::format("0x{:x}", ERR(code.value));
+auto native_error::get_error_message(std::string message, status code) -> std::string {
+  const std::string hex_code = std::format("0x{:x}", ERR(code.value));
   const auto inp = os_load_string(code);
   if (!inp) {
-    return hex_code;
+    return std::format("{}: {}", std::move(message), hex_code);
   }
 
   const auto out = lmbcs::translate(*inp);
-  return out + " (" + hex_code + ")";
+  return std::format("{}: {}", std::move(message), out + " (" + hex_code + ")");
 }

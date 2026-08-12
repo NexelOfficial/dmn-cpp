@@ -3,7 +3,6 @@
 #include <domino/global.h>
 #include <domino/nsfnote.h>
 #include <domino/osmem.h>
-#include <stdexcept>
 
 #include "dmn/error.hpp"
 
@@ -53,7 +52,7 @@ void note::modify_impl(
 ) const {
   auto existing = get<dmn::object>(key);
   if (!existing) {
-    throw std::invalid_argument("Provided key doesn't exist on note");
+    throw dmn::invalid_argument("Provided key doesn't exist on note");
   }
 
   const std::span<const uint8_t> buffer{reinterpret_cast<const uint8_t*>(data), size};

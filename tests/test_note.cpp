@@ -78,8 +78,8 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   primary.set("Tags", tags);
   primary.set(weird_field_name, std::string{"value"});
 
-  REQUIRE_THROWS_AS(primary.set("HugeText", huge_text), dmn::error);
-  REQUIRE_THROWS_AS(primary.compute_with_form(), dmn::error);
+  REQUIRE_THROWS_AS(primary.set("HugeText", huge_text), dmn::native_error);
+  REQUIRE_THROWS_AS(primary.compute_with_form(), dmn::native_error);
   REQUIRE_NOTHROW(primary.embed_element(attachment_name, attachment_path.string()));
   REQUIRE_NOTHROW(primary.embed_element(attachment_path.string()));
   REQUIRE_NOTHROW(primary.save(true));

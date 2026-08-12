@@ -3,8 +3,9 @@
 #include <cstdint>
 #include <cstring>
 #include <span>
-#include <stdexcept>
 #include <type_traits>
+
+#include "dmn/error.hpp"
 
 template <typename T>
 concept is_valid_string = std::is_convertible_v<T, std::basic_string<char>> ||
@@ -50,7 +51,7 @@ class cursor {
       const auto* start = reinterpret_cast<const char*>(remaining.data());
       const auto* end = static_cast<const char*>(std::memchr(start, '\0', remaining.size()));
       if (end == nullptr) {
-        throw std::runtime_error("String does not end within bounds");
+        throw dmn::conversion_error("String does not end within bounds");
       }
 
       const auto str_size = static_cast<size_t>(end - start);
@@ -116,7 +117,7 @@ class cursor {
   void ensure_bounds(uint32_t size_to_read) {
     const size_t new_offset = offset_ + size_to_read;
     if (new_offset > buffer_.size()) {
-      throw std::out_of_range("Memory read out of range");
+      throw dmn::out_of_range("Memory read out of range");
     }
   }
 

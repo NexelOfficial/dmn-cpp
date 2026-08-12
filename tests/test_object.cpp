@@ -1,11 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 
 #include "dmn/object.hpp"
+#include "dmn/error.hpp"
 #include "dmn/list.hpp"
 #include "dmn/type.hpp"
 #include "dmn/note.hpp"
@@ -39,13 +39,13 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE_FALSE(value.is<dmn::list>());
     REQUIRE_FALSE(value.is<bool>());
     REQUIRE(value.try_as<std::string>() == std::nullopt);
-    REQUIRE_THROWS_AS(value.as<double>(), std::runtime_error);
+    REQUIRE_THROWS_AS(value.as<double>(), dmn::conversion_error);
   }
 
   SECTION("text values convert to strings only") {
     const auto text = note.get<dmn::object>("TextValue").value();
     REQUIRE_NOTHROW(note.set("TextValueCopy", text));
-    REQUIRE_NOTHROW(note.save(true));
+    REQUIRE(note.get_type("TextValueCopy") == dmn::type::text);
 
     REQUIRE_FALSE(text.empty());
     REQUIRE(text.is<std::string>());
@@ -55,13 +55,13 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE(text.try_as<double>() == std::nullopt);
     REQUIRE(text.try_as<bool>() == std::nullopt);
     REQUIRE(text.as_string() == "🐶🐶🐶");
-    REQUIRE_THROWS_AS(text.as<double>(), std::runtime_error);
+    REQUIRE_THROWS_AS(text.as<double>(), dmn::conversion_error);
   }
 
   SECTION("number values convert to multiple numbers") {
     const auto number = note.get<dmn::object>("NumericValue").value();
     REQUIRE_NOTHROW(note.set("NumericValueCopy", number));
-    REQUIRE_NOTHROW(note.save(true));
+    REQUIRE(note.get_type("NumericValueCopy") == dmn::type::number);
 
     REQUIRE_FALSE(number.empty());
     REQUIRE(number.is<double>());
@@ -74,7 +74,7 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE(number.try_as<unsigned long>().value() == 42UL);
     REQUIRE(number.try_as<bool>() == std::nullopt);
     REQUIRE(number.as_string() == "42.5");
-    REQUIRE_THROWS_AS(number.as<std::string>(), std::runtime_error);
+    REQUIRE_THROWS_AS(number.as<std::string>(), dmn::conversion_error);
   }
 
   SECTION("boolean conversion only accepts 0 and 1") {
@@ -87,7 +87,7 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE(zero.try_as<bool>().has_value());
     REQUIRE_FALSE(zero.try_as<bool>().value());
     REQUIRE(zero.as_string() == "0");
-    REQUIRE_THROWS_AS(zero.as<std::string>(), std::runtime_error);
+    REQUIRE_THROWS_AS(zero.as<std::string>(), dmn::conversion_error);
 
     REQUIRE_FALSE(one.empty());
     REQUIRE(one.is<bool>());
@@ -102,7 +102,7 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   SECTION("dmn::list conversion only work for text lists") {
     const auto list_value = note.get<dmn::object>("ListValue").value();
     REQUIRE_NOTHROW(note.set("ListValueCopy", list_value));
-    REQUIRE_NOTHROW(note.save(true));
+    REQUIRE(note.get_type("ListValueCopy") == dmn::type::text_list);
 
     REQUIRE(list_value.is<dmn::list>());
     REQUIRE(list_value.try_as<dmn::list>().has_value());
@@ -112,23 +112,23 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE(list.at(0) == "alpha");
     REQUIRE(list.at(1) == "beta");
     REQUIRE(list.at(2) == "gamma");
-    REQUIRE_THROWS_AS(list.at(3), std::out_of_range);
+    REQUIRE_THROWS_AS(list.at(3), dmn::out_of_range);
     REQUIRE(list_value.as_string() == "alpha;beta;gamma");
     REQUIRE(list_value.try_as<std::string>() == std::nullopt);
-    REQUIRE_THROWS_AS(list_value.as<double>(), std::runtime_error);
+    REQUIRE_THROWS_AS(list_value.as<double>(), dmn::conversion_error);
   }
 
   SECTION("dmn::time_date conversion only works for time date") {
     const auto date = note.get<dmn::object>("DateValue").value();
     REQUIRE_NOTHROW(note.set("DateValueCopy", date));
-    REQUIRE_NOTHROW(note.save(true));
+    REQUIRE(note.get_type("DateValueCopy") == dmn::type::time);
 
     REQUIRE(date.is<dmn::time_date>());
     REQUIRE(date.try_as<dmn::time_date>().has_value());
     REQUIRE(date.as<dmn::time_date>() == now_td);
     REQUIRE(date.as_string() == "01-02-2026 12:34:56");
     REQUIRE(date.try_as<std::string>() == std::nullopt);
-    REQUIRE_THROWS_AS(date.as<double>(), std::runtime_error);
+    REQUIRE_THROWS_AS(date.as<double>(), dmn::conversion_error);
   }
 
   SECTION("overwriting the note value doesn't break the object") {

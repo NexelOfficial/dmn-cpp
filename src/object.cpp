@@ -5,7 +5,6 @@
 #include <domino/misc.h>
 
 #include <cstring>
-#include <stdexcept>
 
 #include "dmn/detail/locker.hpp"
 #include "dmn/time_date.hpp"
@@ -26,7 +25,7 @@ auto object::get_type() const -> dmn::type {
 
 void object::write(dmn::type typ, std::span<const uint8_t> data) {
   if (!item_bid_) {
-    throw std::runtime_error("Object that is not an item value can't be overwritten");
+    throw dmn::runtime_error("Object that is not an item value can't be overwritten");
   }
 
   auto st = ensure_state();
@@ -108,14 +107,14 @@ auto object::as_string() const -> std::optional<std::string> {
 
 auto object::ensure_state() -> state& {
   if (!state_) {
-    throw std::runtime_error("Object does not have a valid state.");
+    throw dmn::runtime_error("Object does not have a valid state.");
   }
   return *state_;
 }
 
 auto object::ensure_state() const -> const state& {
   if (!state_) {
-    throw std::runtime_error("Object does not have a valid state.");
+    throw dmn::runtime_error("Object does not have a valid state.");
   }
   return *state_;
 }
