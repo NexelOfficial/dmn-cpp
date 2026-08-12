@@ -59,7 +59,7 @@ class cursor {
       increment_offset(1);
       return buff;
     } else {
-      static_assert(std::false_type::value, "Object cannot be deserialized from memory object");
+      static_assert(cursor::always_false<T>, "Object cannot be deserialized from memory object");
     }
   }
 
@@ -86,7 +86,7 @@ class cursor {
       const char nul = '\0';
       write(&nul, 1);
     } else {
-      static_assert(std::false_type::value, "Object cannot be serialized into memory object");
+      static_assert(cursor::always_false<T>, "Object cannot be serialized into memory object");
     }
   }
 
@@ -119,5 +119,8 @@ class cursor {
       throw std::out_of_range("Memory read out of range");
     }
   }
+
+  template <typename>
+  static constexpr bool always_false = false;
 };
 }  // namespace dmn::detail

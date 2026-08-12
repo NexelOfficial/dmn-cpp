@@ -6,7 +6,6 @@
 
 #include <cstring>
 #include <stdexcept>
-#include <vector>
 
 #include "dmn/detail/locker.hpp"
 #include "dmn/time_date.hpp"
@@ -14,33 +13,45 @@
 
 using dmn::object;
 
+auto object::empty() const noexcept -> bool { return !state_ || state_->size <= 2; }
+
+auto object::get_type() const -> dmn::type {
+  if (!state_ || state_->size < 2 || state_->bid.pool == detail::dhandle_t{}) {
+    return dmn::type::invalid_or_unknown;
+  }
+
+  detail::locker obj(state_->bid, state_->size, detail::ownership::borrow);
+  return obj.read<dmn::type>();
+}
+
 void object::write(dmn::type typ, std::span<const uint8_t> data) {
   if (!item_bid_) {
     throw std::runtime_error("Object that is not an item value can't be overwritten");
   }
 
+  auto st = ensure_state();
   const size_t new_size = data.size() + sizeof(dmn::type);
-  if (new_size != size_) {
+  if (new_size != st.size) {
     const auto raw_item_bid = *reinterpret_cast<BLOCKID*>(&*item_bid_);
     const dmn::status result =
-      NSFItemRealloc(raw_item_bid, reinterpret_cast<BLOCKID*>(&bid_), new_size);
+      NSFItemRealloc(raw_item_bid, reinterpret_cast<BLOCKID*>(&st.bid), new_size);
     result.throw_if_error("Failed to reallocate object memory");
   }
 
-  size_ = new_size;
-  detail::locker pool(bid_, size_, detail::ownership::borrow);
+  st.size = new_size;
+  detail::locker pool(st.bid, st.size, detail::ownership::borrow);
   pool.write(&typ);
   pool.write(data.data(), data.size());
 }
 
 auto object::as_string() const -> std::optional<std::string> {
-  if (size_ < 2 || bid_.pool == detail::dhandle_t{}) {
+  if (!state_ || state_->size < 2 || state_->bid.pool == detail::dhandle_t{}) {
     return std::nullopt;
   }
 
-  detail::locker obj(bid_, size_, detail::ownership::borrow);
+  detail::locker obj(state_->bid, state_->size, detail::ownership::borrow);
   auto typ = obj.read<dmn::type>();
-  const size_t data_size = size_ - sizeof(typ);
+  const size_t data_size = state_->size - sizeof(typ);
 
   if (typ == dmn::type::text) {
     // Use pointer with lmbcs::view instead of obj.read() to prevent double allocation
@@ -93,4 +104,18 @@ auto object::as_string() const -> std::optional<std::string> {
   }
 
   return std::nullopt;
+}
+
+auto object::ensure_state() -> state& {
+  if (!state_) {
+    throw std::runtime_error("Object does not have a valid state.");
+  }
+  return *state_;
+}
+
+auto object::ensure_state() const -> const state& {
+  if (!state_) {
+    throw std::runtime_error("Object does not have a valid state.");
+  }
+  return *state_;
 }

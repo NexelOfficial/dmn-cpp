@@ -4,13 +4,15 @@
 #include <domino/nsfnote.h>
 #include <domino/stdnames.h>
 #include <domino/nsfdb.h>
-#include <domino/osmem.h>
+#include <chrono>
 #include <filesystem>
 #include <random>
 
 #include "dmn/object.hpp"
 #include "dmn/error.hpp"
 #include "dmn/unid.hpp"
+
+#include "dmn/addin/addin.hpp"
 
 using dmn::note;
 
@@ -92,29 +94,6 @@ auto note::copy_to_database(const dmn::database& db) const -> std::optional<note
   return note::open(db, new_noteid);
 }
 
-void note::append_impl(
-  const lmbcs::str& key, dmn::type type, const void* data, uint16_t size
-) const {
-  const bool is_summary = size < MAXONESEGSIZE / 4;
-  const auto data_type = static_cast<uint16_t>(type);
-  const dmn::status result = NSFItemAppend(
-    get_handle(), is_summary ? ITEM_SUMMARY : 0, lmbcs::cast(key), key.size(), data_type, data, size
-  );
-  result.throw_if_error("Failed to append item value");
-}
-
-void note::modify_impl(
-  std::string_view key, dmn::type type, const void* data, uint16_t size
-) const {
-  auto existing = get<dmn::object>(key);
-  if (!existing) {
-    throw std::invalid_argument("Provided key doesn't exist on note");
-  }
-
-  const std::span<const uint8_t> buffer{reinterpret_cast<const uint8_t*>(data), size};
-  existing->write(type, buffer);
-}
-
 void note::embed_element(const std::string& name, const std::string& path) const {
   const lmbcs::str conv_name = lmbcs::translate(name);
   const lmbcs::str conv_path = lmbcs::translate(path);
@@ -147,6 +126,16 @@ void note::compute_with_form() const {
   const dmn::status result =
     NSFNoteComputeWithForm(get_handle(), detail::dhandle_t{}, 0, cwf_callback, nullptr);
   result.throw_if_error("Failed to compute with form");
+}
+
+auto note::get_type(std::string_view key) const -> dmn::type {
+  const lmbcs::str converted = lmbcs::translate(key);
+  auto data_type = dmn::type::invalid_or_unknown;
+  NSFItemInfo(
+    get_handle(), lmbcs::cast(converted), converted.size(), nullptr,
+    reinterpret_cast<uint16_t*>(&data_type), nullptr, nullptr
+  );
+  return data_type;
 }
 
 void note::erase(std::string_view key) const {
@@ -206,26 +195,6 @@ auto note::items(std::optional<std::regex> pattern) const -> object_map_t {
   }
 
   return output;
-}
-
-auto note::get_impl(const lmbcs::str& key) const -> std::optional<dmn::object> {
-  detail::block_id item_bid{};
-  uint16_t item_type = 0;
-  detail::block_id value_bid{};
-  DWORD value_len = 0;
-
-  const dmn::status result = NSFItemInfo(
-    get_handle(), lmbcs::cast(key), key.size(), reinterpret_cast<BLOCKID*>(&item_bid), &item_type,
-    reinterpret_cast<BLOCKID*>(&value_bid), &value_len
-  );
-
-  if (result.is_not_found()) {
-    return std::nullopt;
-  }
-  result.throw_if_error("Failed to get item on note");
-
-  auto owner = std::make_shared<dmn::note>(*this);
-  return dmn::object{value_bid, value_len, owner, item_bid};
 }
 
 void note::get_info_impl(dmn::info key, void* out) const {

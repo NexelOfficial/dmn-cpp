@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -12,7 +13,7 @@
 
 TEST_CASE("object conversion coverage", "[nos][object]") {
   auto [db, _] = utils::random_database();
-  utils::note_guard note{db->create_note()};
+  auto note = db->create_note();
 
   dmn::list tags{};
   tags.push_back("alpha");
@@ -22,12 +23,12 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   const auto system_tp = std::chrono::system_clock::time_point{std::chrono::seconds{1769945696}};
   const auto now_td = dmn::time_date::from_time_point(system_tp);
 
-  note->set("TextValue", "🐶🐶🐶");
-  note->append("NumericValue", 42.5);
-  note->append("FalseValue", false);
-  note->append("TrueValue", true);
-  note->append("DateValue", now_td.value());
-  note->append("ListValue", tags);
+  note.set("TextValue", "🐶🐶🐶");
+  note.set("NumericValue", 42.5);
+  note.set("FalseValue", false);
+  note.set("TrueValue", true);
+  note.set("DateValue", now_td.value());
+  note.set("ListValue", tags);
 
   SECTION("default values are empty") {
     const dmn::object value{};
@@ -42,7 +43,9 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   }
 
   SECTION("text values convert to strings only") {
-    const auto text = note->get<dmn::object>("TextValue").value();
+    const auto text = note.get<dmn::object>("TextValue").value();
+    REQUIRE_NOTHROW(note.set("TextValueCopy", text));
+    REQUIRE_NOTHROW(note.save(true));
 
     REQUIRE_FALSE(text.empty());
     REQUIRE(text.is<std::string>());
@@ -56,7 +59,9 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   }
 
   SECTION("number values convert to multiple numbers") {
-    const auto number = note->get<dmn::object>("NumericValue").value();
+    const auto number = note.get<dmn::object>("NumericValue").value();
+    REQUIRE_NOTHROW(note.set("NumericValueCopy", number));
+    REQUIRE_NOTHROW(note.save(true));
 
     REQUIRE_FALSE(number.empty());
     REQUIRE(number.is<double>());
@@ -73,9 +78,9 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   }
 
   SECTION("boolean conversion only accepts 0 and 1") {
-    const auto zero = note->get<dmn::object>("FalseValue").value();
-    const auto one = note->get<dmn::object>("TrueValue").value();
-    const auto number = note->get<dmn::object>("NumericValue").value();
+    const auto zero = note.get<dmn::object>("FalseValue").value();
+    const auto one = note.get<dmn::object>("TrueValue").value();
+    const auto number = note.get<dmn::object>("NumericValue").value();
 
     REQUIRE_FALSE(zero.empty());
     REQUIRE(zero.is<bool>());
@@ -95,7 +100,9 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   }
 
   SECTION("dmn::list conversion only work for text lists") {
-    const auto list_value = note->get<dmn::object>("ListValue").value();
+    const auto list_value = note.get<dmn::object>("ListValue").value();
+    REQUIRE_NOTHROW(note.set("ListValueCopy", list_value));
+    REQUIRE_NOTHROW(note.save(true));
 
     REQUIRE(list_value.is<dmn::list>());
     REQUIRE(list_value.try_as<dmn::list>().has_value());
@@ -112,7 +119,9 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   }
 
   SECTION("dmn::time_date conversion only works for time date") {
-    const auto date = note->get<dmn::object>("DateValue").value();
+    const auto date = note.get<dmn::object>("DateValue").value();
+    REQUIRE_NOTHROW(note.set("DateValueCopy", date));
+    REQUIRE_NOTHROW(note.save(true));
 
     REQUIRE(date.is<dmn::time_date>());
     REQUIRE(date.try_as<dmn::time_date>().has_value());
@@ -120,5 +129,15 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE(date.as_string() == "01-02-2026 12:34:56");
     REQUIRE(date.try_as<std::string>() == std::nullopt);
     REQUIRE_THROWS_AS(date.as<double>(), std::runtime_error);
+  }
+
+  SECTION("overwriting the note value doesn't break the object") {
+    const auto text = note.get<dmn::object>("TextValue").value();
+    REQUIRE_NOTHROW(note.set("TextValue", "This text is much larger!"));
+    REQUIRE_NOTHROW(note.save(true));
+
+    REQUIRE(text.is<std::string>());
+    REQUIRE(text.try_as<std::string>().has_value());
+    REQUIRE(text.try_as<std::string>().value() == "🐶🐶🐶");
   }
 }

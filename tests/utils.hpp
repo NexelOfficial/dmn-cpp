@@ -1,26 +1,24 @@
 #pragma once
 
+#include "dmn/database.hpp"
+
 #include <optional>
 #include <random>
 
-#include "dmn/note.hpp"
-
 namespace utils {
-struct note_guard {
-  std::shared_ptr<dmn::note> value;
-
-  note_guard(dmn::note n) : value(std::make_shared<dmn::note>(std::move(n))) {}
-
-  auto operator*() -> dmn::note& { return *value; }
-  auto operator->() -> dmn::note* { return &*value; }
-
-  void release() noexcept { value.reset(); }
-};
-
 struct db_guard {
-  std::shared_ptr<dmn::database> value;
+  struct deleter {
+    void operator()(dmn::database* db) const noexcept {
+      if (db != nullptr) {
+        auto path = db->get_path();
+        delete db;
+        dmn::database::remove(path);
+      }
+    }
+  };
 
-  db_guard(dmn::database db) : value(std::make_shared<dmn::database>(std::move(db))) {}
+  std::shared_ptr<dmn::database> value;
+  db_guard(dmn::database db) : value(new dmn::database(std::move(db)), deleter{}) {}
 
   auto operator*() -> dmn::database& { return *value; }
   auto operator->() -> dmn::database* { return &*value; }

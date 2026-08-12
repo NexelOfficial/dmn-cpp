@@ -22,41 +22,26 @@ concept is_item_value = std::is_same_v<T, std::string> || std::is_same_v<T, dmn:
                         std::is_same_v<T, double> || std::is_same_v<T, bool>;
 
 namespace dmn {
+class note;
+class view;
+
 class object {
+  struct state {
+    detail::block_id bid{};
+    size_t size{};
+  };
+
  public:
   object() = default;
-
-  /// Create object from raw domino memory whilst borrowing it.
-  ///
-  /// \param bid Instance of `detail::block_id` holding the raw memory.
-  /// \param size Size of the raw memory.
-  /// \param owner Instance that owns the raw memory.
-  /// \note Text lists must be type-prefixed which means view entries aren't supported.
-  template <typename T>
-  object(
-    detail::block_id bid, size_t size, std::shared_ptr<T> owner,
-    std::optional<detail::block_id> item_bid = std::nullopt
-  )
-      : bid_(bid),
-        size_(size),
-        owner_(std::static_pointer_cast<void>(std::move(owner))),
-        item_bid_(item_bid) {}
 
   /// Check whether the object is empty.
   ///
   /// An object is considered empty when its size is two bytes or less. At that point it's
   /// either completely empty or only has a type but no data.
-  [[nodiscard]] auto empty() const noexcept -> bool { return size_ <= 2; }
+  [[nodiscard]] auto empty() const noexcept -> bool;
 
   /// Extract the type of the object.
-  [[nodiscard]] auto get_type() const -> dmn::type {
-    if (size_ < 2 || bid_.pool == detail::dhandle_t{}) {
-      return dmn::type::invalid_or_unknown;
-    }
-
-    detail::locker obj(bid_, size_, detail::ownership::borrow);
-    return obj.read<dmn::type>();
-  }
+  [[nodiscard]] auto get_type() const -> dmn::type;
 
   /// Write data to the memory behind the object.
   ///
@@ -65,19 +50,20 @@ class object {
   /// \throws std::runtime_error If the object is not an item value.
   /// \throws dmn::error If the reallocation failed.
   /// \note Writing data is not possible when the object does not belong to an item value.
+  /// \note All copies of the object will point to the new memory.
   void write(dmn::type typ, std::span<const uint8_t> data);
 
   /// Check whether the object can be converted to a type.
   template <typename T>
     requires is_item_value<T>
   [[nodiscard]] auto is() const -> bool {
-    if (size_ < 2 || bid_.pool == detail::dhandle_t{}) {
+    if (!state_ || state_->size < 2 || state_->bid.pool == detail::dhandle_t{}) {
       return false;
     }
 
-    detail::locker obj(bid_, size_, detail::ownership::borrow);
+    detail::locker obj(state_->bid, state_->size, detail::ownership::borrow);
     auto typ = obj.read<dmn::type>();
-    const size_t data_size = size_ - sizeof(typ);
+    const size_t data_size = state_->size - sizeof(typ);
 
     if constexpr (std::is_same_v<T, std::string>) {
       return typ == dmn::type::text;
@@ -107,13 +93,13 @@ class object {
   template <typename T>
     requires is_item_value<T>
   [[nodiscard]] auto try_as() const -> std::optional<T> {
-    if (size_ < 2 || bid_.pool == detail::dhandle_t{}) {
+    if (!state_ || state_->size < 2 || state_->bid.pool == detail::dhandle_t{}) {
       return std::nullopt;
     }
 
-    detail::locker obj(bid_, size_, detail::ownership::borrow);
+    detail::locker obj(state_->bid, state_->size, detail::ownership::borrow);
     auto typ = obj.read<dmn::type>();
-    const size_t data_size = size_ - sizeof(typ);
+    const size_t data_size = state_->size - sizeof(typ);
 
     if constexpr (std::is_same_v<T, std::string>) {
       if (typ == dmn::type::text) {
@@ -177,7 +163,27 @@ class object {
  private:
   std::optional<detail::block_id> item_bid_ = std::nullopt;
   std::shared_ptr<void> owner_;
-  detail::block_id bid_{};
-  size_t size_{};
+  std::shared_ptr<state> state_;
+
+  [[nodiscard]] auto ensure_state() -> state&;
+  [[nodiscard]] auto ensure_state() const -> const state&;
+
+  /// Create object from raw domino memory whilst borrowing it.
+  ///
+  /// \param bid Instance of `detail::block_id` holding the raw memory.
+  /// \param size Size of the raw memory.
+  /// \param owner Instance that owns the raw memory.
+  /// \note Text lists must be type-prefixed which means view entries aren't supported.
+  template <class T>
+  object(
+    detail::block_id bid, size_t size, std::shared_ptr<T> owner,
+    std::optional<detail::block_id> item_bid = std::nullopt
+  )
+      : item_bid_(item_bid),
+        owner_(std::static_pointer_cast<void>(std::move(owner))),
+        state_(std::make_shared<state>(state(bid, size))) {}
+
+  friend class dmn::note;
+  friend class dmn::view;
 };
 }  // namespace dmn
