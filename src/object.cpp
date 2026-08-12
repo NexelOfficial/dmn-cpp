@@ -74,13 +74,11 @@ auto object::as_string() const -> std::optional<std::string> {
   if (typ == dmn::type::time && data_size == sizeof(dmn::time_date)) {
     auto td = obj.read<TIMEDATE>();
     std::string output(MAXALPHATIMEDATE + 1, '\0');
-    uint16_t output_len = 0;
-    auto res =
-      ConvertTIMEDATEToText(nullptr, nullptr, &td, output.data(), MAXALPHATIMEDATE, &output_len);
+    auto res = ConvertTIMEDATEtoRFC3339Date(&td, output.data(), MAXALPHATIMEDATE);
     if (res != NOERROR) {
       return std::nullopt;
     }
-    output.resize(output_len);
+    output.resize(output.find('\0'));
     return output;
   }
   if (typ == dmn::type::text_list && data_size >= sizeof(uint16_t)) {

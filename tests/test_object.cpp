@@ -126,7 +126,7 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE(date.is<dmn::time_date>());
     REQUIRE(date.try_as<dmn::time_date>().has_value());
     REQUIRE(date.as<dmn::time_date>() == now_td);
-    REQUIRE(date.as_string() == "01-02-2026 12:34:56");
+    REQUIRE(date.as_string() == "2026-02-01T11:34:56.00Z");
     REQUIRE(date.try_as<std::string>() == std::nullopt);
     REQUIRE_THROWS_AS(date.as<double>(), dmn::conversion_error);
   }
