@@ -39,8 +39,8 @@ void object::write(dmn::type typ, std::span<const uint8_t> data) {
 
   st.size = new_size;
   detail::locker pool(st.bid, st.size, detail::ownership::borrow);
-  pool.write(&typ);
-  pool.write(data.data(), data.size());
+  pool.write(typ);
+  pool.write(data.data(), data.size(), typ);
 }
 
 auto object::as_string() const -> std::optional<std::string> {
@@ -48,8 +48,7 @@ auto object::as_string() const -> std::optional<std::string> {
     return std::nullopt;
   }
 
-  detail::locker obj(state_->bid, state_->size, detail::ownership::borrow);
-  auto typ = obj.read<dmn::type>();
+  auto [typ, obj] = data_pair();
   const size_t data_size = state_->size - sizeof(typ);
 
   if (typ == dmn::type::text) {
@@ -61,10 +60,10 @@ auto object::as_string() const -> std::optional<std::string> {
   if (typ == dmn::type::number && data_size == sizeof(double)) {
     constexpr static uint8_t MAX_DOUBLE_SIZE = 32;
     std::array<char, MAX_DOUBLE_SIZE> buffer{};
+    const auto num = obj.read<double>();
 
-    const auto [ptr, ec] = std::to_chars(
-      buffer.data(), std::to_address(buffer.end()), obj.read<double>(), std::chars_format::general
-    );
+    const auto [ptr, ec] =
+      std::to_chars(buffer.data(), std::to_address(buffer.end()), num, std::chars_format::general);
     if (ec != std::errc{}) {
       return std::nullopt;
     }
@@ -72,7 +71,7 @@ auto object::as_string() const -> std::optional<std::string> {
     return std::string(buffer.data(), ptr);
   }
   if (typ == dmn::type::time && data_size == sizeof(dmn::time_date)) {
-    auto td = obj.read<TIMEDATE>();
+    const auto td = obj.read<TIMEDATE>();
     std::string output(MAXALPHATIMEDATE + 1, '\0');
     auto res = ConvertTIMEDATEtoRFC3339Date(&td, output.data(), MAXALPHATIMEDATE);
     if (res != NOERROR) {
@@ -82,7 +81,7 @@ auto object::as_string() const -> std::optional<std::string> {
     return output;
   }
   if (typ == dmn::type::text_list && data_size >= sizeof(uint16_t)) {
-    auto entries = obj.read<uint16_t>();
+    const auto entries = obj.read<uint16_t>();
     std::vector<uint16_t> lengths{};
     lengths.reserve(entries);
 
@@ -94,13 +93,17 @@ auto object::as_string() const -> std::optional<std::string> {
     for (const auto& len : lengths) {
       const lmbcs::view out(obj.get_pointer(), len);
       output += lmbcs::translate(out) + ";";
-      obj.increment_offset(len);
+      obj.advance_offset(len);
     }
 
     return output.empty() ? "" : output.substr(0, output.size() - 1);
   }
 
   return std::nullopt;
+}
+
+auto object::get_cursor() const -> detail::locker {
+  return {state_->bid, state_->size, detail::ownership::borrow};
 }
 
 auto object::ensure_state() -> state& {
@@ -115,4 +118,10 @@ auto object::ensure_state() const -> const state& {
     throw dmn::runtime_error("Object does not have a valid state.");
   }
   return *state_;
+}
+
+auto object::data_pair() const -> std::pair<dmn::type, detail::locker> {
+  detail::locker obj(state_->bid, state_->size, detail::ownership::borrow);
+  const auto typ = obj.read<dmn::type>();
+  return {typ, std::move(obj)};
 }

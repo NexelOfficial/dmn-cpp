@@ -2,11 +2,14 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string>
 
 #include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
+class object;
+
 class list {
  public:
   class const_iterator {
@@ -40,13 +43,6 @@ class list {
   ///
   /// \throws dmn::native_error If allocating the list fails.
   list();
-
-  /// Create an in-memory text list from an existing one.
-  ///
-  /// \param existing Pointer to an existing list prefixed by data type.
-  /// \throws dmn::native_error If allocating the list fails.
-  /// \throws dmn::invalid_argument If the provided pointer is not of a text list.
-  list(void* existing);
 
   /// Check whether the list contains no entries.
   ///
@@ -119,5 +115,9 @@ class list {
  private:
   detail::uhandle<detail::dhandle_t> hdl_;
   uint16_t size_ = 0;
+
+  list(std::span<uint8_t> buffer);
+
+  friend class dmn::object;
 };
 }  // namespace dmn

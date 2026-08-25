@@ -24,13 +24,14 @@ list::list() : hdl_(OSMemFree) {
   }
 }
 
-list::list(void* existing) : hdl_(OSMemFree) {
-  const uint16_t type = *static_cast<uint16_t*>(existing);
+list::list(std::span<uint8_t> buffer) : hdl_(OSMemFree) {
+  const uint16_t type = *reinterpret_cast<uint16_t*>(buffer.data());
   if (type != TYPE_TEXT_LIST) {
     throw dmn::invalid_argument("Provided pointer is not a text list");
   }
 
-  const dmn::status result = ListDuplicate(static_cast<LIST*>(existing), TRUE, hdl_.data());
+  const dmn::status result =
+    ListDuplicate(reinterpret_cast<LIST*>(buffer.data()), TRUE, hdl_.data());
   result.throw_if_error("Failed to duplicate list");
   auto hdl = hdl_.try_get();
   if (hdl) {

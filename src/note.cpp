@@ -4,15 +4,12 @@
 #include <domino/nsfnote.h>
 #include <domino/stdnames.h>
 #include <domino/nsfdb.h>
-#include <chrono>
 #include <filesystem>
 #include <random>
 
 #include "dmn/object.hpp"
 #include "dmn/error.hpp"
 #include "dmn/unid.hpp"
-
-#include "dmn/addin/addin.hpp"
 
 using dmn::note;
 

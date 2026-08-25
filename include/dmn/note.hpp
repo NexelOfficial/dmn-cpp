@@ -132,7 +132,8 @@ class note {
 
     if constexpr (
       std::is_same_v<T, std::string> || std::is_same_v<T, dmn::list> ||
-      std::is_same_v<T, dmn::time_date> || std::is_convertible_v<T, double>
+      std::is_same_v<T, dmn::formula> || std::is_same_v<T, dmn::time_date> ||
+      std::is_convertible_v<T, double>
     ) {
       return value->try_as<T>();
     } else if constexpr (std::is_same_v<T, dmn::object>) {
@@ -211,15 +212,20 @@ class note {
       setter(dmn::type::time, &value, sizeof(value));
     } else if constexpr (std::is_same_v<T, dmn::object>) {
       auto st = value.ensure_state();
-      auto obj = detail::locker(st.bid, st.size, detail::ownership::borrow);
+      const auto obj = detail::locker(st.bid, st.size, detail::ownership::borrow);
 
       setter(value.get_type(), obj.get_pointer(sizeof(uint16_t)), obj.size() - sizeof(uint16_t));
     } else if constexpr (std::is_same_v<T, dmn::list>) {
-      auto obj = detail::locker(value.get_handle(), value.buffer_size(), detail::ownership::borrow);
+      const auto obj =
+        detail::locker(value.get_handle(), value.buffer_size(), detail::ownership::borrow);
 
       setter(
         dmn::type::text_list, obj.get_pointer(sizeof(uint16_t)), obj.size() - sizeof(uint16_t)
       );
+    } else if constexpr (std::is_same_v<T, dmn::formula>) {
+      const auto obj = detail::locker(value.get_handle(), value.size(), detail::ownership::borrow);
+
+      setter(dmn::type::formula, obj.get_pointer(), obj.size());
     } else {
       static_assert(note::always_false<T>, "Unsupported type for set-function");
     }
