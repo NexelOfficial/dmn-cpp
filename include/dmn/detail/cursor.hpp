@@ -60,6 +60,8 @@ class cursor {
   /// Get the pointer with the current offset
   [[nodiscard]] auto get_pointer() const noexcept -> uint8_t* { return get_pointer(get_offset()); }
 
+  [[nodiscard]] auto size() const -> size_t { return buffer_.size(); }
+
  private:
   std::span<uint8_t> buffer_;
   size_t offset_ = 0;

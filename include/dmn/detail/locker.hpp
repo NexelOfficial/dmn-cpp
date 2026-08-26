@@ -71,8 +71,6 @@ class locker : public detail::cursor {
 
   [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return hdl_.get().pool; }
 
-  [[nodiscard]] auto size() const -> size_t { return size_; }
-
  private:
   detail::uhandle<detail::block_id> hdl_;
   size_t size_;

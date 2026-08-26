@@ -4,15 +4,14 @@
 #include <string>
 #include <string_view>
 
+#include "dmn/detail/locker.hpp"
 #include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
-namespace design {
-class view;
+namespace detail {
+template <typename T>
+struct object_value;
 }
-
-class note;
-class object;
 
 class formula {
  public:
@@ -25,6 +24,10 @@ class formula {
   void merge(const formula& other) const;
   void add_summary(std::string_view item_name) const;
 
+  [[nodiscard]] auto get_cursor() const -> detail::locker {
+    return {get_handle(), size(), dmn::detail::ownership::borrow};
+  }
+
   [[nodiscard]] auto get_handle() const -> handle_t { return hdl_.get(); }
 
  private:
@@ -33,8 +36,6 @@ class formula {
   formula(std::span<uint8_t> buffer);
   formula();
 
-  friend class dmn::design::view;
-  friend class dmn::note;
-  friend class dmn::object;
+  friend struct dmn::detail::object_value<dmn::formula>;
 };
 }  // namespace dmn

@@ -5,10 +5,14 @@
 #include <span>
 #include <string>
 
+#include "dmn/detail/locker.hpp"
 #include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
-class object;
+namespace detail {
+template <typename T>
+struct object_value;
+}
 
 class list {
  public:
@@ -110,6 +114,10 @@ class list {
   [[nodiscard]] auto cbegin() const -> const_iterator;
   [[nodiscard]] auto cend() const -> const_iterator;
 
+  [[nodiscard]] auto get_cursor() const -> detail::locker {
+    return {get_handle(), buffer_size(), dmn::detail::ownership::borrow};
+  }
+
   [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return hdl_.get(); }
 
  private:
@@ -118,6 +126,6 @@ class list {
 
   list(std::span<uint8_t> buffer);
 
-  friend class dmn::object;
+  friend struct dmn::detail::object_value<dmn::list>;
 };
 }  // namespace dmn

@@ -6,22 +6,19 @@
 #include <string>
 #include <unordered_map>
 
-#include "dmn/detail/lmbcs.hpp"
+#include "dmn/detail/note_value.hpp"
+#include "dmn/detail/object_value.hpp"
 #include "dmn/detail/uhandle.hpp"
-#include "dmn/detail/locker.hpp"
-#include "dmn/time_date.hpp"
+#include "dmn/detail/lmbcs.hpp"
 #include "dmn/object.hpp"
 #include "dmn/type.hpp"
 #include "dmn/database.hpp"
 #include "dmn/unid.hpp"
-#include "dmn/list.hpp"
 
 namespace dmn {
 class strlist;
 
 class note {
-  using setter_func_t = void (note::*)(std::string_view, dmn::type, const void*, uint16_t) const;
-
  public:
   using object_map_t = std::unordered_map<std::string, dmn::object>;
   using handle_t = detail::dhandle_t;
@@ -108,11 +105,10 @@ class note {
   /// \throws dmn::invalid_handle If the underlying handle is empty.
   template <typename T>
   void set(std::string_view key, const T& value) const {
-    if (!has(key)) {
-      set_impl(key, value, &dmn::note::append_impl);
-      return;
-    }
-    set_impl(key, value, &dmn::note::modify_impl);
+    detail::note_value<T>::apply(value, [&](auto type, auto buffer) {
+      auto func = has(key) ? &dmn::note::modify_impl : &dmn::note::append_impl;
+      std::invoke(func, this, key, type, buffer);
+    });
   }
 
   /// Get an item's value as a certain type.
@@ -123,6 +119,7 @@ class note {
   /// \note When getting the item as a string, all non-string types are converted to string
   /// automatically thus the type is not checked.
   template <typename T>
+    requires detail::has_object_convert<T> || std::is_same_v<T, dmn::object>
   [[nodiscard]] auto get(std::string_view key) const -> std::optional<T> {
     const lmbcs::str converted = lmbcs::translate(key);
     auto value = get_impl(converted);
@@ -130,17 +127,12 @@ class note {
       return std::nullopt;
     }
 
-    if constexpr (
-      std::is_same_v<T, std::string> || std::is_same_v<T, dmn::list> ||
-      std::is_same_v<T, dmn::formula> || std::is_same_v<T, dmn::time_date> ||
-      std::is_convertible_v<T, double>
-    ) {
+    if constexpr (detail::has_object_convert<T>) {
       return value->try_as<T>();
     } else if constexpr (std::is_same_v<T, dmn::object>) {
       return value;
-    } else {
-      static_assert(note::always_false<T>, "Unsupported type for get-function");
     }
+    return std::nullopt;
   }
 
   /// Get information about the note.
@@ -195,46 +187,10 @@ class note {
   /// Internal implementation used by `dmn::note::get()`.
   [[nodiscard]] auto get_impl(const lmbcs::str& key) const -> std::optional<dmn::object>;
 
-  /// Setting function used by `dmn::note::set()`.
-  template <typename T>
-  void set_impl(std::string_view key, const T& value, setter_func_t func) const {
-    auto setter = [&](auto type, const void* data, size_t size) {
-      (this->*func)(key, type, data, size);
-    };
-
-    if constexpr (std::is_convertible_v<T, std::string_view>) {
-      auto conv_value = lmbcs::translate(value);
-      setter(dmn::type::text, conv_value.data(), conv_value.size());
-    } else if constexpr (std::is_convertible_v<T, double>) {
-      auto conv_value = static_cast<double>(value);
-      setter(dmn::type::number, &conv_value, sizeof(conv_value));
-    } else if constexpr (std::is_same_v<T, dmn::time_date>) {
-      setter(dmn::type::time, &value, sizeof(value));
-    } else if constexpr (std::is_same_v<T, dmn::object>) {
-      auto st = value.ensure_state();
-      const auto obj = detail::locker(st.bid, st.size, detail::ownership::borrow);
-
-      setter(value.get_type(), obj.get_pointer(sizeof(uint16_t)), obj.size() - sizeof(uint16_t));
-    } else if constexpr (std::is_same_v<T, dmn::list>) {
-      const auto obj =
-        detail::locker(value.get_handle(), value.buffer_size(), detail::ownership::borrow);
-
-      setter(
-        dmn::type::text_list, obj.get_pointer(sizeof(uint16_t)), obj.size() - sizeof(uint16_t)
-      );
-    } else if constexpr (std::is_same_v<T, dmn::formula>) {
-      const auto obj = detail::locker(value.get_handle(), value.size(), detail::ownership::borrow);
-
-      setter(dmn::type::formula, obj.get_pointer(), obj.size());
-    } else {
-      static_assert(note::always_false<T>, "Unsupported type for set-function");
-    }
-  }
-
   /// Internal implementation used by `dmn::note::set()`.
-  void append_impl(std::string_view key, dmn::type type, const void* data, uint16_t size) const;
+  void append_impl(std::string_view key, dmn::type type, std::span<const std::byte> buffer) const;
   /// Internal implementation used by `dmn::note::set()`.
-  void modify_impl(std::string_view key, dmn::type type, const void* data, uint16_t size) const;
+  void modify_impl(std::string_view key, dmn::type type, std::span<const std::byte> buffer) const;
 
   template <typename>
   static constexpr bool always_false = false;

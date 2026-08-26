@@ -23,7 +23,7 @@ auto object::get_type() const -> dmn::type {
   return obj.read<dmn::type>();
 }
 
-void object::write(dmn::type typ, std::span<const uint8_t> data) {
+void object::write(dmn::type typ, std::span<const std::byte> data) {
   if (!item_bid_) {
     throw dmn::runtime_error("Object that is not an item value can't be overwritten");
   }

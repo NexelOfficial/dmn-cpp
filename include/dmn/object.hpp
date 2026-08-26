@@ -1,32 +1,15 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
 
 #include <memory>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 
-#include "dmn/detail/lmbcs.hpp"
+#include "dmn/detail/object_value.hpp"
 #include "dmn/detail/locker.hpp"
-#include "dmn/error.hpp"
-#include "dmn/formula.hpp"
-#include "dmn/time_date.hpp"
-#include "dmn/list.hpp"
 #include "dmn/type.hpp"
-
-template <typename T>
-concept is_object_convertible = requires(const dmn::detail::locker& cursor, T& out) {
-  { from_object(cursor, out) } -> std::same_as<void>;
-};
-
-template <typename T>
-concept is_item_value =
-  std::is_same_v<T, std::string> || std::is_same_v<T, dmn::list> ||
-  std::is_same_v<T, dmn::formula> || std::is_same_v<T, dmn::time_date> || std::is_integral_v<T> ||
-  std::is_same_v<T, double> || std::is_same_v<T, bool> || is_object_convertible<T>;
 
 namespace dmn {
 class note;
@@ -58,56 +41,33 @@ class object {
   /// \throws dmn::native_error If the reallocation failed.
   /// \note Writing data is not possible when the object does not belong to an item value.
   /// \note All copies of the object will point to the new memory.
-  void write(dmn::type typ, std::span<const uint8_t> data);
+  void write(dmn::type typ, std::span<const std::byte> data);
 
   /// Check whether the object can be converted to a type.
   template <typename T>
-    requires is_item_value<T>
+    requires detail::has_object_typecheck<T>
   [[nodiscard]] auto is() const -> bool {
-    if (!state_ || state_->size < 2 || state_->bid.pool == detail::dhandle_t{}) {
+    if (!state_ || state_->size < sizeof(dmn::type) || state_->bid.pool == detail::dhandle_t{}) {
       return false;
     }
 
-    auto [typ, _] = data_pair();
-    const size_t data_size = state_->size - sizeof(typ);
-
-    if constexpr (std::is_same_v<T, std::string>) {
-      return typ == dmn::type::text;
-    } else if constexpr (std::is_convertible_v<T, double>) {
-      return typ == dmn::type::number && data_size == sizeof(double);
-    } else if constexpr (std::is_same_v<T, dmn::list>) {
-      return typ == dmn::type::text_list && data_size >= sizeof(uint16_t);
-    } else if constexpr (std::is_same_v<T, dmn::list>) {
-      return typ == dmn::type::formula;
-    } else if constexpr (
-      std::is_same_v<T, dmn::time_date> || std::is_same_v<T, std::chrono::system_clock::time_point>
-    ) {
-      return typ == dmn::type::time && data_size == sizeof(dmn::time_date);
-    }
-
-    return false;
+    auto cs = get_cursor();
+    return detail::object_value<T>::is(cs);
   }
 
   /// Try to convert the object to a type.
   ///
   /// \return The converted value, if available.
   template <typename T>
-    requires is_item_value<T>
+    requires detail::has_object_convert<T>
   [[nodiscard]] auto try_as() const -> std::optional<T> {
     if (!state_ || state_->size < 2 || state_->bid.pool == detail::dhandle_t{}) {
       return std::nullopt;
     }
 
     try {
-      auto [typ, cursor] = data_pair();
-      if constexpr (is_object_convertible<T>) {
-        T out{};
-        from_object(cursor, out);
-        return out;
-      } else {
-        const std::size_t data_size = state_->size - sizeof(typ);
-        return try_convert<T>(cursor, typ, data_size);
-      }
+      auto cs = get_cursor();
+      return detail::object_value<T>::convert(cs);
     } catch (const dmn::error&) {
       return std::nullopt;
     }
@@ -118,7 +78,7 @@ class object {
   /// \return The converted value
   /// \throws dmn::conversion_error If the object can not be converted to `T`.
   template <typename T>
-    requires is_item_value<T>
+    requires detail::has_object_typecheck<T>
   [[nodiscard]] auto as() const -> T {
     auto result = try_as<T>();
     if (!result) {
@@ -161,48 +121,6 @@ class object {
   [[nodiscard]] auto ensure_state() const -> const state&;
 
   [[nodiscard]] auto data_pair() const -> std::pair<dmn::type, detail::locker>;
-
-  template <typename T>
-  [[nodiscard]] auto try_convert(detail::locker& cursor, dmn::type typ, size_t data_size) const
-    -> std::optional<T> {
-    if constexpr (std::is_same_v<T, std::string>) {
-      if (typ != dmn::type::text) {
-        return std::nullopt;
-      }
-
-      // Use pointer with lmbcs::view instead of obj.read() to prevent double allocation
-      auto* ptr = cursor.get_pointer();
-      const lmbcs::view value(ptr, data_size);
-      return lmbcs::translate(value);
-    } else if constexpr (std::is_same_v<T, bool>) {
-      if (typ != dmn::type::number) {
-        return std::nullopt;
-      }
-
-      auto value = cursor.read<double>();
-      if (value == 0 || value == 1) {
-        return static_cast<bool>(value);
-      }
-    } else if constexpr (std::is_convertible_v<T, double>) {
-      if (typ == dmn::type::number) {
-        return static_cast<T>(cursor.read<double>());
-      }
-    } else if constexpr (std::is_same_v<T, dmn::list>) {
-      if (typ == dmn::type::text_list) {
-        return dmn::list({cursor.get_pointer(0), cursor.size()});
-      }
-    } else if constexpr (std::is_same_v<T, dmn::formula>) {
-      if (typ == dmn::type::formula) {
-        return dmn::formula({cursor.get_pointer(0), cursor.size()});
-      }
-    } else if constexpr (std::is_same_v<T, dmn::time_date>) {
-      if (typ == dmn::type::time) {
-        return cursor.read<dmn::time_date>();
-      }
-    }
-
-    return std::nullopt;
-  }
 
   friend class dmn::note;
   friend class dmn::view;

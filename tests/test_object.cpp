@@ -72,12 +72,11 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE(number.try_as<int>().value() == 42);
     REQUIRE(number.try_as<unsigned long>().has_value());
     REQUIRE(number.try_as<unsigned long>().value() == 42UL);
-    REQUIRE(number.try_as<bool>() == std::nullopt);
     REQUIRE(number.as_string() == "42.5");
     REQUIRE_THROWS_AS(number.as<std::string>(), dmn::conversion_error);
   }
 
-  SECTION("boolean conversion only accepts 0 and 1") {
+  SECTION("boolean conversion works for numbers") {
     const auto zero = note.get<dmn::object>("FalseValue").value();
     const auto one = note.get<dmn::object>("TrueValue").value();
     const auto number = note.get<dmn::object>("NumericValue").value();
@@ -96,7 +95,7 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE(one.as_string() == "1");
     REQUIRE(one.try_as<std::string>() == std::nullopt);
 
-    REQUIRE(number.try_as<bool>() == std::nullopt);
+    REQUIRE(number.try_as<bool>() == true);
   }
 
   SECTION("dmn::list conversion only work for text lists") {
