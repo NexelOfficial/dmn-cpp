@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 
 if(POLICY CMP0091)
   cmake_policy(SET CMP0091 NEW)
@@ -33,14 +33,10 @@ target_include_directories(
 )
 
 if(MSVC)
-  set_property(
-    TARGET dmn
-    PROPERTY MSVC_RUNTIME_LIBRARY
-    "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
+    "$<$<CONFIG:Release>:ProgramDatabase>"
   )
-
-  target_compile_options(dmn PRIVATE /utf-8 /Zi)
-
+  
   target_link_options(dmn PRIVATE $<$<CONFIG:Release>:/DEBUG>)
 endif()
 

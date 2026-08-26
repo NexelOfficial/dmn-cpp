@@ -5,12 +5,6 @@ small RAII-oriented interface for opening NSF databases, reading and writing
 notes, working with views, running DQL queries, sending mail, handling ACL data,
 and building Domino add-ins.
 
-The library still links to the Domino runtime, but application code does not
-need to be written directly against the Domino C headers. Domino handles and 
-memory blocks are represented with project types such as `dmn::dhandle_t` and 
-`dmn::os::block_id`, and higher-level classes own, lock, unlock, and release
-resources for you.
-
 ## Quickstart
 
 Add `dmn-cpp` as a custom vcpkg registry in your `vcpkg-configuration.json`:

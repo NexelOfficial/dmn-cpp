@@ -5,11 +5,10 @@
 #include <domino/osmisc.h>
 
 #include <exception>
-#include <stdexcept>
 
 #include "dmn/addin/session.hpp"
 #include "dmn/addin/messages.hpp"
-#include "dmn/misc/error.hpp"
+#include "dmn/error.hpp"
 
 using dmn::addin;
 
@@ -19,14 +18,14 @@ auto addin::create(std::string_view name) -> addin {
   (void)dmn::session::instance();
 
   HMODULE module_handle{};
-  dmn::dhandle_t temp_status_line{};
+  detail::dhandle_t temp_status_line{};
   AddInQueryDefaults(&module_handle, &temp_status_line);
   AddInDeleteStatusLine(temp_status_line);
 
   lmbcs::str converted = lmbcs::translate(name);
-  const dmn::dhandle_t status_line = AddInCreateStatusLine(lmbcs::cast(converted));
-  if (status_line == dmn::dhandle_t{}) {
-    throw std::runtime_error("Failed to create status line");
+  const detail::dhandle_t status_line = AddInCreateStatusLine(lmbcs::cast(converted));
+  if (status_line == detail::dhandle_t{}) {
+    throw dmn::runtime_error("Failed to create status line");
   }
 
   AddInSetDefaults(module_handle, status_line);
@@ -52,7 +51,7 @@ auto addin::day_elapsed() -> bool { return AddInDayHasElapsed() != FALSE; }
 
 void addin::enter_loop(const function_t& callback) const {
   if (!status_hdl_) {
-    throw std::runtime_error("Status line or message queue invalid");
+    throw dmn::invalid_handle("Status line or message queue invalid");
   }
 
   const std::scoped_lock lock(mtx);
@@ -93,4 +92,4 @@ void addin::log_impl(const std::string& text) {
   AddInLogMessageText(lmbcs::cast(converted), dmn::no_error.value);
 }
 
-addin::addin(dmn::dhandle_t handle) : status_hdl_(handle, AddInDeleteStatusLine) {};
+addin::addin(detail::dhandle_t handle) : status_hdl_(handle, AddInDeleteStatusLine) {};

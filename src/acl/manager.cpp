@@ -6,19 +6,19 @@
 #include <domino/nsfdb.h>
 #include <domino/miscerr.h>
 
-#include "dmn/os/uhandle.hpp"
+#include "dmn/detail/uhandle.hpp"
+#include "dmn/detail/locker.hpp"
 #include "dmn/acl/names.hpp"
-#include "dmn/misc/error.hpp"
-#include "dmn/nsf/database.hpp"
-#include "dmn/os/locker.hpp"
+#include "dmn/database.hpp"
+#include "dmn/error.hpp"
 
 using dmn::acl::manager;
 
-manager::manager(dmn::database db, dmn::dhandle_t handle)
+manager::manager(dmn::database db, detail::dhandle_t handle)
     : hdl_(handle, OSMemFree), db_(std::move(db)) {}
 
 auto manager::read(const dmn::database& db) -> manager {
-  dmn::dhandle_t handle = {};
+  detail::dhandle_t handle = {};
   const dmn::status result = NSFDbReadACL(db.get_handle(), &handle);
   result.throw_if_error("Failed to read ACL");
 
@@ -27,7 +27,7 @@ auto manager::read(const dmn::database& db) -> manager {
 
 auto manager::lookup_access(dmn::acl::names& names) const -> uint16_t {
   ACL_PRIVILEGES privileges = {};
-  dmn::dhandle_t privilege_names = {};
+  detail::dhandle_t privilege_names = {};
   uint16_t flags = 0;
   uint16_t level = 0;
 
@@ -37,10 +37,10 @@ auto manager::lookup_access(dmn::acl::names& names) const -> uint16_t {
   result.throw_if_error("Failed to look up access");
 
   // Wrap names in locker for freeing
-  auto obj = dmn::os::locker(privilege_names);
+  auto obj = detail::locker(privilege_names);
 
   if (level < ACL_LEVEL_NOACCESS || level > ACL_LEVEL_HIGHEST) {
-    throw dmn::error("Access level is invalid", ERR_ACL_CORRUPT);
+    throw dmn::runtime_error("Access level is invalid");
   }
 
   return level;

@@ -5,7 +5,7 @@
 #include <functional>
 #include <string>
 
-#include "dmn/os/uhandle.hpp"
+#include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
 class addin {
@@ -19,8 +19,8 @@ class addin {
   ///
   /// \param name Name of the add-in.
   /// \return Initialized add-in instance.
-  /// \throws dmn::error If message queue creation or status line creation fails.
-  /// \throws std::runtime_error If created status line is invalid.
+  /// \throws dmn::native_error If message queue creation or status line creation fails.
+  /// \throws dmn::runtime_error If created status line is invalid.
   static auto create(std::string_view name) -> addin;
 
   /// Update the add-in status line.
@@ -43,7 +43,7 @@ class addin {
   /// termination is requested, or an exception is thrown from the callback.
   ///
   /// \param loop_function Function invoked on each loop iteration.
-  /// \throws std::runtime_error If the status line or message queue handle is invalid.
+  /// \throws dmn::invalid_handle If the status line handle is invalid.
   /// \note Exceptions thrown by the callback are logged and terminate the loop.
   void enter_loop(const function_t& callback) const;
 
@@ -75,11 +75,11 @@ class addin {
   static std::mutex mtx;
   static inline std::optional<std::string> prefix_;
 
-  dmn::uhandle<dmn::dhandle_t> status_hdl_;
+  detail::uhandle<detail::dhandle_t> status_hdl_;
 
   /// Internal implementation used by `dmn::addin::log`.
   static void log_impl(const std::string& text);
 
-  addin(dmn::dhandle_t handle);
+  addin(detail::dhandle_t handle);
 };
 }  // namespace dmn

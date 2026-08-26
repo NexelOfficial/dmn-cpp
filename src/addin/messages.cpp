@@ -7,7 +7,7 @@
 #include <format>
 
 #include "dmn/addin/session.hpp"
-#include "dmn/misc/error.hpp"
+#include "dmn/error.hpp"
 
 using dmn::messages;
 

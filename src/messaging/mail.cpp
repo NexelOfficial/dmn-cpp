@@ -8,8 +8,8 @@
 #include <cstring>
 
 #include "dmn/messaging/mime.hpp"
-#include "dmn/os/lmbcs.hpp"
-#include "dmn/misc/error.hpp"
+#include "dmn/detail/lmbcs.hpp"
+#include "dmn/error.hpp"
 
 using dmn::mail;
 
@@ -46,7 +46,7 @@ void mail::add_blind_copy_to(const std::string& email) { add_to_list(blind_copy_
 void mail::send(const std::string& from, const std::string& subject) {
   // Check if we have anyone to send to
   if (recipients_.empty() || !msg_hdl_) {
-    throw std::runtime_error("No recipients were added to mail");
+    throw dmn::runtime_error("No recipients were added to mail");
   }
 
   // Add recipients list
