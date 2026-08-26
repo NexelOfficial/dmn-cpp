@@ -40,7 +40,12 @@ struct status {
 constexpr static status no_error{0};
 
 struct error : std::exception {
-  using std::exception::exception;
+  explicit error(std::string message) : message_(std::move(message)) {}
+
+  [[nodiscard]] auto what() const noexcept -> const char* override { return message_.c_str(); }
+
+ private:
+  std::string message_;
 };
 
 struct invalid_handle : error {

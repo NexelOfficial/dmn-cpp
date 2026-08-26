@@ -40,7 +40,7 @@ auto manager::lookup_access(dmn::acl::names& names) const -> uint16_t {
   auto obj = detail::locker(privilege_names);
 
   if (level < ACL_LEVEL_NOACCESS || level > ACL_LEVEL_HIGHEST) {
-    throw dmn::error("Access level is invalid", ERR_ACL_CORRUPT);
+    throw dmn::runtime_error("Access level is invalid");
   }
 
   return level;

@@ -51,7 +51,13 @@ template <typename T>
   requires std::is_convertible_v<T, std::string_view> && (!std::is_same_v<T, std::string_view>)
 struct note_value<T> {
   static void apply(const T& value, setter_func_t setter) {
-    note_value<std::string_view>::apply(std::string_view{value}, std::move(setter));
+    if constexpr (std::is_array_v<T>) {
+      note_value<std::string_view>::apply(
+        std::string_view{std::data(value), std::size(value) - 1}, std::move(setter)
+      );
+    } else {
+      note_value<std::string_view>::apply(std::string_view{value}, std::move(setter));
+    }
   }
 };
 

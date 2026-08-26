@@ -14,6 +14,9 @@ formula::formula() : hdl_(OSMemFree) {};
 
 formula::formula(std::span<uint8_t> buffer) : hdl_(OSMemFree) {
   auto obj = detail::locker::allocate(buffer);
+  if (!obj) {
+    throw dmn::runtime_error("Failed to allocate Domino memory");
+  }
   hdl_.put(obj->release().block);
 }
 
