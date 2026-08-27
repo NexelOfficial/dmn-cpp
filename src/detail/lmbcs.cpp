@@ -8,8 +8,12 @@ using dmn::lmbcs;
 
 static_assert(sizeof(LMBCS) == sizeof(lmbcs::char_t));
 
+auto lmbcs::cast(lmbcs::view in) noexcept -> const char* {
+  return reinterpret_cast<const char*>(in.data());
+}
+
 auto lmbcs::cast(const lmbcs::str& in) noexcept -> const char* {
-  return reinterpret_cast<const char*>(in.c_str());
+  return reinterpret_cast<const char*>(in.data());
 }
 
 auto lmbcs::cast(lmbcs::str& in) noexcept -> char* { return reinterpret_cast<char*>(in.data()); }

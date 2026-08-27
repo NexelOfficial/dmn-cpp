@@ -228,7 +228,7 @@ static_assert(native_type(type::note_seal2_hdr) == _NOTE_SEAL2_HDR);
 static_assert(native_type(type::note_seal2) == _NOTE_SEAL2);
 static_assert(native_type(type::note_record_desc) == _NOTE_RECORD_DESC);
 
-auto ods::size(type typ) -> size_t { return ODSLength(static_cast<uint16_t>(typ)); }
+auto ods::size(type typ) -> uint16_t { return ODSLength(static_cast<uint16_t>(typ)); }
 
 void ods::write(void* dst, const void* src, type typ) {
   ODSWriteMemory(static_cast<void*>(&dst), static_cast<uint16_t>(typ), src, 1);

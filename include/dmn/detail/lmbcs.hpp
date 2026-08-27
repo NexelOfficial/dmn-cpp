@@ -51,6 +51,13 @@ class lmbcs {
     return out;
   }
 
+  /// Cast an `lmbcs::view` to a `const char*`.
+  ///
+  /// Uses a reinterpret cast to convert the underlying LMBCS pointer returned by
+  /// `lmbcs::view::data()` to a `const char*`. Most Domino functions accept `char*` parameters even
+  /// though they expect the string data to be encoded as LMBCS.
+  static auto cast(lmbcs::view in) noexcept -> const char*;
+
   /// Cast an `lmbcs::str` to a `const char*`.
   ///
   /// Uses a reinterpret cast to convert the underlying LMBCS pointer returned by

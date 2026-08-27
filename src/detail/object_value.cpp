@@ -1,6 +1,7 @@
 #include "dmn/detail/object_value.hpp"
 
 #include "dmn/detail/lmbcs.hpp"
+#include "dmn/type.hpp"
 
 using dmn::detail::object_value;
 
@@ -44,7 +45,7 @@ auto object_value<dmn::time_date>::is(detail::cursor& cs) -> bool {
 }
 
 auto object_value<dmn::list>::convert(detail::cursor& cs) -> std::optional<dmn::list> {
-  if (cs.read<dmn::type>() == dmn::type::text_list) {
+  if (is(cs)) {
     return dmn::list({cs.get_pointer(0), cs.size()});
   }
   return std::nullopt;
@@ -55,8 +56,8 @@ auto object_value<dmn::list>::is(detail::cursor& cs) -> bool {
 }
 
 auto object_value<dmn::formula>::convert(detail::cursor& cs) -> std::optional<dmn::formula> {
-  if (cs.read<dmn::type>() == dmn::type::formula) {
-    return dmn::formula({cs.get_pointer(0), cs.size()});
+  if (is(cs)) {
+    return dmn::formula({cs.get_pointer(), cs.size() - sizeof(dmn::type)});
   }
   return std::nullopt;
 }

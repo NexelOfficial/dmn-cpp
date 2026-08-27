@@ -28,7 +28,7 @@ auto names::from_username(const std::string& name) -> names {
 
   names out{};
   out.buffer_.resize(names_size);
-  names_obj.read(out.buffer_);
+  names_obj.read<std::byte>(out.buffer_);
 
   return out;
 }

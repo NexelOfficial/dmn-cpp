@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "dmn/database.hpp"
-#include "dmn/design/column.hpp"
 #include "dmn/detail/lmbcs.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/error.hpp"
@@ -27,13 +26,21 @@
 #include "dmn/type.hpp"
 
 using dmn::design::view;
+namespace ods = dmn::detail::ods;
+
+static_assert(sizeof(dmn::design::view_table_format) == sizeof(VIEW_TABLE_FORMAT));
+static_assert(alignof(dmn::design::view_table_format) == alignof(VIEW_TABLE_FORMAT));
+
+static_assert(sizeof(dmn::design::view_table_format2) == sizeof(VIEW_TABLE_FORMAT2));
+static_assert(alignof(dmn::design::view_table_format2) == alignof(VIEW_TABLE_FORMAT2));
 
 namespace {
-auto make_item_name(uint16_t sequence) -> std::string { return "$" + std::to_string(sequence); }
+auto make_item_name(uint16_t sequence) -> dmn::lmbcs::str {
+  return dmn::lmbcs::translate("$" + std::to_string(sequence));
+}
 
 auto build_collation() -> dmn::object {
   namespace detail = dmn::detail;
-  namespace ods = detail::ods;
 
   COLLATION collation{};
   collation.BufferSize = ods::size(ods::type::collation) + ods::size(ods::type::collate_descriptor);
@@ -52,7 +59,22 @@ auto build_collation() -> dmn::object {
 }
 }  // namespace
 
-view::view(dmn::note note) : note_(std::move(note)), selection_(dmn::formula::compile("@All")) {}
+view::view(dmn::note note)
+    : note_(std::move(note)),
+      selection_(dmn::formula{"@All"}),
+      table_format_{
+        .header = {VIEW_FORMAT_VERSION, VIEW_STYLE_TABLE},
+        .sequence_number = 1,
+        .flags = VIEW_TABLE_FLAG_CONFLICT,
+      },
+      table_format2_{
+        .length = ods::size(ods::type::view_table_format2),
+        .background_color = design::color::white,
+        .title_font = DEFAULT_BOLD_FONT_ID,
+        .unread_font = DEFAULT_FONT_ID,
+        .totals_font = DEFAULT_FONT_ID,
+        .signature = VALID_VIEW_FORMAT_SIG,
+      } {}
 
 auto view::create(const dmn::database& db, std::string_view title) -> view {
   NOTEID noteid = 0;
@@ -72,19 +94,21 @@ auto view::create(const dmn::database& db, std::string_view title) -> view {
   note.set(DESIGN_FLAGS, "PY");
 
   view out{std::move(note)};
-  out.selection_ = dmn::formula::compile("@All");
+  out.selection_ = dmn::formula{"@All"};
   return out;
 }
 
 auto view::column(std::string_view title) -> design::column& {
-  const auto itr =
-    std::ranges::find_if(columns_, [&](const auto& current) { return current.title_ == title; });
+  const auto converted = lmbcs::translate(title);
+  const auto itr = std::ranges::find_if(columns_, [&](const auto& current) {
+    return current.title_ == converted;
+  });
   if (itr != columns_.end()) {
     return *itr;
   }
 
   columns_.emplace_back();
-  return columns_.at(columns_.size() - 1);
+  return columns_.back();
 }
 
 auto view::set_selection_formula(dmn::formula formula) -> view& {
@@ -107,105 +131,65 @@ void view::save() {
 }
 
 auto view::build_view_format() -> dmn::object {
-  constexpr uint16_t DEFAULT_VIEW_WIDTH = 80;
-  namespace ods = detail::ods;
-
-  std::vector<lmbcs::str> item_names;
-  std::vector<lmbcs::str> titles;
-  std::vector<dmn::formula> formulas;
-  std::vector<VIEW_COLUMN_FORMAT> columns;
-
-  item_names.reserve(columns_.size());
-  titles.reserve(columns_.size());
-  formulas.reserve(columns_.size());
-  columns.reserve(columns_.size());
-
   size_t buffer_size =
     ods::size(ods::type::view_table_format) + ods::size(ods::type::view_table_format2);
 
   for (auto& current : columns_) {
-    if (current.formula_.empty()) {
+    if (current.formula_.size() == 0) {
       throw dmn::invalid_argument("View column formula is empty");
     }
 
     if (current.item_name_.empty()) {
-      current.item_name_ = make_item_name(next_sequence_++);
+      current.item_name_ = make_item_name(table_format_.sequence_number++);
     }
 
-    auto item_name = lmbcs::translate(current.item_name_);
-    buffer_size += item_name.size();
-    item_names.emplace_back(std::move(item_name));
+    current.formula_.add_item_name(current.item_name_);
 
-    auto title = lmbcs::translate(current.title_);
-    buffer_size += title.size();
-    titles.emplace_back(std::move(title));
+    current.format_.formula_size_ = current.formula_.size();
+    current.format_.item_name_size_ = current.item_name_.size();
+    current.format_.title_size_ = current.title_.size();
 
-    auto formula = dmn::formula::compile(current.formula_, current.item_name_);
-    buffer_size += formula.size();
-    formulas.emplace_back(std::move(formula));
-
-    VIEW_COLUMN_FORMAT format{};
-    format.Signature = VIEW_COLUMN_FORMAT_SIGNATURE;
-    format.DisplayWidth = DEFAULT_VIEW_WIDTH;
-    format.FontID = DEFAULT_BOLD_FONT_ID;
-    format.FormatDataType = VIEW_COL_TEXT;
-    format.FormulaSize = formulas.back().size();
-    format.ItemNameSize = item_names.back().size();
-    format.TitleSize = titles.back().size();
-    format.ConstantValueSize = 0;
-    columns.emplace_back(format);
-    buffer_size +=
-      ods::size(ods::type::view_column_format) + ods::size(ods::type::view_column_format2);
+    buffer_size += current.formula_.size() + current.item_name_.size() + current.title_.size() +
+                   ods::size(ods::type::view_column_format) +
+                   ods::size(ods::type::view_column_format2);
   }
 
-  VIEW_TABLE_FORMAT table{};
-  table.Header.Version = VIEW_FORMAT_VERSION;
-  table.Header.ViewStyle = VIEW_STYLE_TABLE;
-  table.Columns = columns.size();
-  table.ItemSequenceNumber = next_sequence_;
-  table.Flags = VIEW_TABLE_FLAG_CONFLICT;
+  table_format_.columns = columns_.size();
 
   auto locker = detail::locker::allocate(buffer_size + sizeof(dmn::type));
   locker.write(dmn::type::view_format);
-  locker.write(table, ods::type::view_table_format);
+  locker.write(table_format_, ods::type::view_table_format);
 
-  for (const auto& current : columns) {
-    locker.write(current, ods::type::view_column_format);
+  for (const auto& current : columns_) {
+    locker.write(current.format_, ods::type::view_column_format);
   }
 
-  for (size_t i = 0; i < columns.size(); ++i) {
-    const auto& item_name = item_names.at(i);
-    const auto item_span = std::as_bytes(std::span{item_name.data(), item_name.size()});
-    locker.write(item_span);
-    selection_.add_summary(columns_.at(i).item_name_);
+  for (const auto& current : columns_) {
+    const auto& item_name = current.item_name_;
+    const auto& title = current.title_;
+    const auto& formula = current.formula_;
+    const auto cursor = formula.get_cursor();
 
-    const auto& title = titles.at(i);
-    const auto title_span = std::as_bytes(std::span{title.data(), title.size()});
-    locker.write(title_span);
+    locker.write(std::span{item_name.data(), item_name.size()});
+    locker.write(std::span{title.data(), title.size()});
+    locker.write(std::span{cursor.get_pointer(), cursor.size()});
 
-    const auto& formula = formulas.at(i);
-    const detail::locker cursor(formula.get_handle(), formula.size(), detail::ownership::borrow);
-    const auto span = std::span{cursor.get_pointer(), cursor.size()};
-    locker.write(span);
+    selection_.add_summary(item_name);
     selection_.merge(formula);
   }
 
-  selection_.add_summary(VIEW_CONFLICT_ITEM);
-  selection_.add_summary(FIELD_LINK);
+  if ((table_format_.flags & VIEW_TABLE_FLAG_CONFLICT) != 0) {
+    selection_.add_summary(VIEW_CONFLICT_ITEM);
+  }
 
-  VIEW_TABLE_FORMAT2 table2{};
-  table2.Length = detail::ods::size(ods::type::view_table_format2);
-  table2.BackgroundColor = NOTES_COLOR_WHITE;
-  table2.TitleFont = DEFAULT_BOLD_FONT_ID;
-  table2.UnreadFont = DEFAULT_FONT_ID;
-  table2.TotalsFont = DEFAULT_FONT_ID;
-  table2.wSig = VALID_VIEW_FORMAT_SIG;
-  locker.write(table2, ods::type::view_table_format2);
+  if ((table_format_.flags & VIEW_TABLE_FLAG_FLATINDEX) == 0) {
+    selection_.add_summary(FIELD_LINK);
+  }
 
-  for (size_t i = 0; i < columns.size(); ++i) {
-    VIEW_COLUMN_FORMAT2 column2{};
-    column2.Signature = VIEW_COLUMN_FORMAT_SIGNATURE2;
-    locker.write(column2, ods::type::view_column_format2);
+  locker.write(table_format2_, ods::type::view_table_format2);
+
+  for (const auto& current : columns_) {
+    locker.write(current.format2_, ods::type::view_column_format2);
   }
 
   return {std::move(locker)};

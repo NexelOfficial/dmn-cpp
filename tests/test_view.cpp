@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <array>
+#include <ios>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -15,9 +17,9 @@ TEST_CASE("a view can be created through the design API", "[nsf][design]") {
   const std::string view_name = "View_" + utils::random_small_string();
 
   auto design_view = dmn::design::view::create(*db, view_name);
-  design_view.column("#").set_title("#").set_formula("Subject");
-  design_view.column("Amount").set_title("Amount").set_formula("Amount");
-  design_view.set_selection_formula(dmn::formula::compile("@All"));
+  design_view.column("Subject").set_title("Subject").set_formula(dmn::formula{"Subject"});
+  design_view.column("Amount").set_title("Amount").set_formula(dmn::formula{"Amount"});
+  design_view.set_selection_formula(dmn::formula{"@All"});
   design_view.save();
 
   const std::array<std::pair<std::string, double>, 3> expected_values{{
