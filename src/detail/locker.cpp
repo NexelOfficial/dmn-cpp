@@ -32,7 +32,7 @@ locker::locker(detail::block_id bid, size_t size, ownership own)
   }
 
   if (own != ownership::free) {
-    auto* locked_ptr = OSLockBlock(uint8_t, bid);
+    auto* locked_ptr = OSLockBlock(std::byte, bid);
     if (locked_ptr == nullptr) {
       return;
     }
@@ -42,23 +42,14 @@ locker::locker(detail::block_id bid, size_t size, ownership own)
   hdl_.put(bid);
 }
 
-auto locker::allocate_impl(const uint8_t* data, size_t size, ownership own)
-  -> std::optional<locker> {
+auto locker::allocate_impl(size_t size, ownership own) -> locker {
   (void)dmn::session::instance();
-  if (size == 0 || size > MAX_ALLOC_SIZE) {
-    return std::nullopt;
+  if (size == 0) {
+    throw dmn::invalid_argument("Size cannot be zero");
   }
 
   detail::dhandle_t out = {};
   const dmn::status result = OSMemAlloc(0, size, &out);
-  if (result.is_error()) {
-    return std::nullopt;
-  }
-
-  {
-    auto obj = locker(out, size, ownership::borrow);
-    obj.write(data, size);
-  }
-
-  return locker(out, size, own);
+  result.throw_if_error("Failed to allocate memory");
+  return {out, size, own};
 }

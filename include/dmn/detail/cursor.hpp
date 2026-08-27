@@ -5,6 +5,7 @@
 #include <span>
 #include <type_traits>
 
+#include "dmn/detail/ods.hpp"
 #include "dmn/error.hpp"
 #include "dmn/type.hpp"
 
@@ -15,33 +16,55 @@ concept is_valid_string = std::is_convertible_v<T, std::basic_string<char>> ||
 namespace dmn::detail {
 class cursor {
  public:
-  cursor(uint8_t* ptr, size_t size) noexcept : buffer_(ptr, size) {
+  cursor(std::byte* ptr, size_t size) noexcept : buffer_(ptr, size) {
     if (ptr == nullptr) {
       buffer_ = buffer_.subspan(0, 0);
     }
   };
 
   void reset() noexcept { offset_ = 0; }
-  void reset(uint8_t* ptr, size_t size) noexcept {
+  void reset(std::byte* ptr, size_t size) noexcept {
     buffer_ = {ptr, size};
     offset_ = 0;
   }
 
-  void write(const void* data, size_t size, dmn::type typ = dmn::type::unavailable);
-
-  void read(void* out, size_t size, dmn::type typ = dmn::type::unavailable);
-
-  template <typename T, dmn::type Type = dmn::type::unavailable>
-    requires std::is_trivially_copyable_v<T>
-  void write(const T& value) {
-    write(&value, sizeof(T), Type);
+  void write(std::span<const std::byte> buffer) {
+    ensure_bounds(buffer.size());
+    std::memcpy(get_pointer(), buffer.data(), buffer.size());
   }
 
-  template <typename T, dmn::type Type = dmn::type::unavailable>
+  void read(std::span<std::byte> buffer) {
+    ensure_bounds(buffer.size());
+    std::memcpy(buffer.data(), get_pointer(), buffer.size());
+  }
+
+  template <typename T>
     requires std::is_trivially_copyable_v<T>
-  [[nodiscard]] auto read() -> T {
+  void write(const T& value, std::optional<detail::ods::type> typ = std::nullopt) {
+    auto size = typ ? detail::ods::size(*typ) : sizeof(T);
+    ensure_bounds(size);
+
+    if (typ) {
+      detail::ods::write(get_pointer(), &value, *typ);
+    } else {
+      std::memcpy(get_pointer(), &value, size);
+    }
+    offset_ += size;
+  }
+
+  template <typename T>
+    requires std::is_trivially_copyable_v<T>
+  [[nodiscard]] auto read(std::optional<detail::ods::type> typ = std::nullopt) -> T {
+    auto size = typ ? detail::ods::size(*typ) : sizeof(T);
+    ensure_bounds(size);
+
     T out{};
-    read(&out, sizeof(T), Type);
+    if (typ) {
+      detail::ods::read(&out, get_pointer(), *typ);
+    } else {
+      std::memcpy(&out, get_pointer(), size);
+    }
+    offset_ += size;
     return out;
   }
 
@@ -52,18 +75,22 @@ class cursor {
   [[nodiscard]] auto get_offset() const noexcept -> size_t { return offset_; }
 
   /// Get the pointer with a custom offset
-  [[nodiscard]] auto get_pointer(size_t offset) const noexcept -> uint8_t* {
+  template <typename T = std::byte>
+  [[nodiscard]] auto get_pointer(size_t offset) const noexcept -> T* {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    return buffer_.data() + offset;
+    return reinterpret_cast<T*>(buffer_.data() + offset);
   }
 
   /// Get the pointer with the current offset
-  [[nodiscard]] auto get_pointer() const noexcept -> uint8_t* { return get_pointer(get_offset()); }
+  template <typename T = std::byte>
+  [[nodiscard]] auto get_pointer() const noexcept -> T* {
+    return get_pointer<T>(get_offset());
+  }
 
   [[nodiscard]] auto size() const -> size_t { return buffer_.size(); }
 
  private:
-  std::span<uint8_t> buffer_;
+  std::span<std::byte> buffer_;
   size_t offset_ = 0;
 
   void ensure_bounds(uint32_t size_to_read) const {

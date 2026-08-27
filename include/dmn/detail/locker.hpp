@@ -2,17 +2,13 @@
 
 #include <cstdint>
 #include <limits>
-#include <optional>
+#include <type_traits>
 
 #include "dmn/detail/cursor.hpp"
 #include "dmn/detail/block.hpp"
 #include "dmn/detail/uhandle.hpp"
 
 namespace dmn::detail {
-template <typename T>
-concept is_byte_container = std::ranges::contiguous_range<T> && std::ranges::sized_range<T> &&
-                            sizeof(std::ranges::range_value_t<T>) == 1;
-
 enum class ownership : uint8_t {
   /// Takes ownership of the handle.
   ///
@@ -54,15 +50,32 @@ class locker : public detail::cursor {
 
   /// Allocate a chunk of memory on the server
   ///
-  /// Copies the contents of the provided container to a new chunk of memory on the server.
-  /// \param buffer Byte container with `size()` and `data()` functions.
+  /// Copies the provided buffer to a new chunk of memory on the server.
+  /// \param buffer Buffer holding the data to copy.
   /// \param own Ownership mode for the handle. See `dmn::utils::ownership` for details.
-  /// \return Instance of `dmn::detail::locker` with `ownership::take`.
-  /// \note The maximum amount of memory that can be allocated is 1.048.575 bytes.
+  /// \return Instance of `detail::locker`.
+  /// \throws dmn::illegal_argument If the provided size is zero.
+  /// \throws dmn::native_error If allocating the memory failed.
+  /// \note The requested size can not be zero.
   template <typename T>
-    requires is_byte_container<T>
-  static auto allocate(const T& buffer, ownership own = ownership::take) -> std::optional<locker> {
-    return allocate_impl(buffer.data(), buffer.size(), own);
+    requires std::is_trivially_copyable_v<T>
+  static auto allocate(std::span<const T> buffer, ownership own = ownership::take) -> locker {
+    auto bytes = std::as_bytes(buffer);
+    auto locker = allocate_impl(bytes.size(), own);
+    locker.write(bytes);
+    return locker;
+  }
+
+  /// Allocate a chunk of memory on the server
+  ///
+  /// \param size Size of the memory to allocate
+  /// \param own Ownership mode for the handle. See `dmn::utils::ownership` for details.
+  /// \return Instance of `detail::locker`.
+  /// \throws dmn::illegal_argument If the provided size is zero.
+  /// \throws dmn::native_error If allocating the memory failed.
+  /// \note The requested size can not be zero.
+  static auto allocate(size_t size, ownership own = ownership::take) -> locker {
+    return allocate_impl(size, own);
   }
 
   [[nodiscard]] auto release() -> detail::block_id { return hdl_.release(); }
@@ -75,8 +88,7 @@ class locker : public detail::cursor {
   detail::uhandle<detail::block_id> hdl_;
   size_t size_;
 
-  /// Internal implementation used by `dmn::detail::locker::allocate`.
-  static auto allocate_impl(const uint8_t* data, size_t size, ownership own)
-    -> std::optional<locker>;
+  /// Internal implementation used by `detail::locker::allocate`.
+  static auto allocate_impl(size_t size, ownership own) -> locker;
 };
 }  // namespace dmn::detail

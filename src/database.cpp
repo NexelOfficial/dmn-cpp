@@ -55,8 +55,10 @@ auto database::open(std::string_view file, const dmn::acl::names& names)
   (void)dmn::session::instance();
 
   // Allocate memory on server for names
-  const auto names_obj =
-    detail::locker::allocate(names.get_count() == 0 ? std::vector<uint8_t>{} : names.buffer());
+  std::optional<detail::locker> names_obj = std::nullopt;
+  if (names.get_count() > 0) {
+    names_obj.emplace(detail::locker::allocate<std::byte>(names.buffer()));
+  }
   const detail::dhandle_t names_hdl = names_obj ? names_obj->get_handle() : NULLHANDLE;
 
   handle_t handle = {};

@@ -104,6 +104,7 @@ class note {
   /// stored.
   /// \throws dmn::invalid_handle If the underlying handle is empty.
   template <typename T>
+    requires detail::has_note_value_apply<T>
   void set(std::string_view key, const T& value) const {
     detail::note_value<T>::apply(value, [&](auto type, auto buffer) {
       auto func = has(key) ? &dmn::note::modify_impl : &dmn::note::append_impl;

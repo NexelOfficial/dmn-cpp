@@ -13,7 +13,6 @@
 
 namespace dmn {
 class note;
-class view;
 
 class object {
   struct state {
@@ -23,6 +22,15 @@ class object {
 
  public:
   object() = default;
+
+  /// Create object from `detail::locker`.
+  ///
+  /// \param locker Instance of `detail::locker` holding the raw memory.
+  object(detail::locker locker) {
+    auto st = state(locker.get_block_id(), locker.size());
+    state_ = std::make_shared<state>(st);
+    owner_ = std::make_shared<detail::locker>(std::move(locker));
+  }
 
   /// Check whether the object is empty.
   ///
@@ -107,7 +115,7 @@ class object {
   /// \param bid Instance of `detail::block_id` holding the raw memory.
   /// \param size Size of the raw memory.
   /// \param owner Instance that owns the raw memory.
-  /// \note Text lists must be type-prefixed which means view entries aren't supported.
+  /// \note Text list values must be type-prefixed
   template <class T>
   object(
     detail::block_id bid, size_t size, std::shared_ptr<T> owner,
@@ -122,7 +130,6 @@ class object {
 
   [[nodiscard]] auto data_pair() const -> std::pair<dmn::type, detail::locker>;
 
-  friend class dmn::note;
-  friend class dmn::view;
+  friend class note;
 };
 }  // namespace dmn

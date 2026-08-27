@@ -5,6 +5,7 @@
 #include "dmn/design/column.hpp"
 #include "dmn/formula.hpp"
 #include "dmn/note.hpp"
+#include "dmn/object.hpp"
 
 namespace dmn {
 class database;
@@ -29,7 +30,7 @@ class view {
   view(dmn::note note);
 
   static auto open_impl(dmn::note note) -> view;
-  [[nodiscard]] auto build_view_format() -> std::vector<uint8_t>;
+  [[nodiscard]] auto build_view_format() -> dmn::object;
 
   friend class column;
 };

@@ -24,7 +24,7 @@ list::list() : hdl_(OSMemFree) {
   }
 }
 
-list::list(std::span<uint8_t> buffer) : hdl_(OSMemFree) {
+list::list(std::span<std::byte> buffer) : hdl_(OSMemFree) {
   const uint16_t type = *reinterpret_cast<uint16_t*>(buffer.data());
   if (type != TYPE_TEXT_LIST) {
     throw dmn::invalid_argument("Provided pointer is not a text list");
@@ -62,7 +62,7 @@ auto list::at(size_t index) const -> std::string {
   const dmn::status result = ListGetText(list.get_pointer(), TRUE, index, &text, &text_size);
   result.throw_if_error("Failed to get list entry");
 
-  const auto* data = reinterpret_cast<const uint8_t*>(text);
+  const auto* data = reinterpret_cast<const lmbcs::char_t*>(text);
   return dmn::lmbcs::translate(dmn::lmbcs::view(data, text_size));
 }
 

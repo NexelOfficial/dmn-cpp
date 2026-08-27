@@ -6,7 +6,7 @@
 
 using dmn::lmbcs;
 
-static_assert(sizeof(LMBCS) == sizeof(uint8_t));
+static_assert(sizeof(LMBCS) == sizeof(lmbcs::char_t));
 
 auto lmbcs::cast(const lmbcs::str& in) noexcept -> const char* {
   return reinterpret_cast<const char*>(in.c_str());

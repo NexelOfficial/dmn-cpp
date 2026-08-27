@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <span>
 #include <string>
 #include <string_view>
@@ -9,8 +8,9 @@
 namespace dmn {
 class lmbcs {
  public:
-  using str = std::basic_string<uint8_t>;
-  using view = std::basic_string_view<uint8_t>;
+  using char_t = unsigned char;
+  using str = std::basic_string<char_t>;
+  using view = std::basic_string_view<char_t>;
 
   template <typename T>
   using return_t = std::conditional_t<std::convertible_to<T, lmbcs::view>, std::string, lmbcs::str>;

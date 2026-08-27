@@ -30,7 +30,7 @@ struct status {
   /// \return true if status is an error, false otherwise.
   [[nodiscard]] auto is_error() const noexcept -> bool;
 
-  /// Throw the status as a `dmn::error` if it is an error.
+  /// Throw the status as a `dmn::natve_error` if it is an error.
   ///
   /// \param message Descriptive error message
   /// \throws dmn::native_error If the status is an error.

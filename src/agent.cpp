@@ -80,10 +80,8 @@ auto agent::run(const std::optional<dmn::note>& note) const -> std::optional<std
 
   try {
     auto out_obj = detail::locker(out_hdl, out_len, detail::ownership::borrow);
-
-    lmbcs::str output(out_len, '\0');
-    out_obj.read(output.data(), out_len);
-    return lmbcs::translate(output);
+    auto view = lmbcs::view(out_obj.get_pointer<lmbcs::char_t>(), out_len);
+    return lmbcs::translate(view);
   } catch (...) {
     return std::nullopt;
   }

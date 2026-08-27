@@ -40,7 +40,7 @@ void object::write(dmn::type typ, std::span<const std::byte> data) {
   st.size = new_size;
   detail::locker pool(st.bid, st.size, detail::ownership::borrow);
   pool.write(typ);
-  pool.write(data.data(), data.size(), typ);
+  pool.write(data);
 }
 
 auto object::as_string() const -> std::optional<std::string> {
@@ -53,8 +53,7 @@ auto object::as_string() const -> std::optional<std::string> {
 
   if (typ == dmn::type::text) {
     // Use pointer with lmbcs::view instead of obj.read() to prevent double allocation
-    auto* ptr = obj.get_pointer();
-    const lmbcs::view value(ptr, data_size);
+    const lmbcs::view value(obj.get_pointer<lmbcs::char_t>(), data_size);
     return lmbcs::translate(value);
   }
   if (typ == dmn::type::number && data_size == sizeof(double)) {
@@ -91,7 +90,7 @@ auto object::as_string() const -> std::optional<std::string> {
 
     std::string output;
     for (const auto& len : lengths) {
-      const lmbcs::view out(obj.get_pointer(), len);
+      const lmbcs::view out(obj.get_pointer<lmbcs::char_t>(), len);
       output += lmbcs::translate(out) + ";";
       obj.advance_offset(len);
     }

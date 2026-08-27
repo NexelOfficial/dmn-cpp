@@ -79,16 +79,10 @@ void view::iterate_entries(
         }
 
         // Copy memory to owned object
-        const std::span<uint8_t> buffer{entries_obj.get_pointer(), len};
-        auto owned = locker::allocate(buffer);
-        if (owned) {
-          const auto bid = owned->get_block_id();
-          auto owner = std::make_shared<locker>(std::move(*owned));
-          auto value = dmn::object{bid, len, owner};
-          current_entry.columns.emplace_back(value);
-        } else {
-          current_entry.columns.emplace_back();
-        }
+        const std::span buffer{entries_obj.get_pointer(), len};
+        auto locker = locker::allocate<std::byte>(buffer);
+        auto value = dmn::object{std::move(locker)};
+        current_entry.columns.emplace_back(value);
 
         entries_obj.advance_offset(len);
       }
