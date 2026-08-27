@@ -115,7 +115,7 @@ class list {
   [[nodiscard]] auto cend() const -> const_iterator;
 
   [[nodiscard]] auto get_cursor() const -> detail::locker {
-    return {get_handle(), buffer_size(), dmn::detail::ownership::borrow};
+    return {get_handle(), buffer_size(), detail::ownership::borrow};
   }
 
   [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return hdl_.get(); }
@@ -124,8 +124,8 @@ class list {
   detail::uhandle<detail::dhandle_t> hdl_;
   uint16_t size_ = 0;
 
-  list(std::span<uint8_t> buffer);
+  list(std::span<std::byte> buffer);
 
-  friend struct dmn::detail::object_value<dmn::list>;
+  friend struct detail::object_value<dmn::list>;
 };
 }  // namespace dmn

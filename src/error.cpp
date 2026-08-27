@@ -49,8 +49,7 @@ auto mime_error::make(const char* message, int code) -> dmn::mime_error {
 }
 
 native_error::native_error(const char* message, status code)
-    : code_(code),
-      error(std::format("{}: {}", message, get_error_message(message, code)).c_str()) {}
+    : code_(code), error(std::format("{}: {}", message, get_error_message(message, code))) {}
 
 auto native_error::os_load_string(status code) -> std::optional<lmbcs::str> {
   lmbcs::str buffer(MAX_MESSAGE_SIZE, '\0');

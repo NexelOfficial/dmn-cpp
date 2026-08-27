@@ -17,14 +17,7 @@ class dql {
     std::variant<std::string, const char*, int, long, long long, double, bool, date_time>;
 
   struct expression {
-    enum class oper : std::uint8_t {
-      comparison,
-      contains,
-      logical_and,
-      logical_or,
-      logical_not,
-      raw
-    };
+    enum class oper : uint8_t { comparison, contains, logical_and, logical_or, logical_not, raw };
 
     oper mode{oper::raw};
 

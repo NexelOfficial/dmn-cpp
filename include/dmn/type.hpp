@@ -46,15 +46,6 @@ enum class type : uint16_t {
   seal2 = 31U
 };
 
-constexpr auto is_canonical(dmn::type typ) -> bool {
-  return typ != type::error && typ != type::unavailable && typ != type::text &&
-         typ != type::text_list && typ != type::rfc822_text && typ != type::number &&
-         typ != type::number_range && typ != type::time && typ != type::time_range &&
-         typ != type::formula && typ != type::userid && typ != type::invalid_or_unknown &&
-         typ != type::noteref_list && typ != type::notelink_list && typ != type::highlights &&
-         typ != type::sched_list && typ != type::mime_part;
-}
-
 enum class info : uint16_t {
   note_id = 1U,
   oid = 2U,

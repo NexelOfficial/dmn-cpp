@@ -28,7 +28,7 @@ auto names::from_username(const std::string& name) -> names {
 
   names out{};
   out.buffer_.resize(names_size);
-  names_obj.read(out.buffer_.data(), out.buffer_.size());
+  names_obj.read(out.buffer_);
 
   return out;
 }
@@ -56,10 +56,11 @@ auto names::get_name(size_t index) const -> std::optional<std::string> {
     return std::nullopt;
   }
 
-  auto current = lmbcs::view{buffer_.data(), buffer_.size()}.substr(sizeof(NAMES_LIST));
+  const auto* ptr = reinterpret_cast<const lmbcs::char_t*>(buffer_.data());
+  auto current = lmbcs::view{ptr, buffer_.size()}.substr(sizeof(NAMES_LIST));
 
   for (size_t i = 0; i < index; ++i) {
-    const auto nul = current.find(static_cast<unsigned char>(0));
+    const auto nul = current.find(static_cast<lmbcs::char_t>(0));
     if (nul == lmbcs::view::npos) {
       return std::nullopt;
     }
@@ -67,7 +68,7 @@ auto names::get_name(size_t index) const -> std::optional<std::string> {
     current = current.substr(nul + 1);
   }
 
-  const auto nul = current.find(static_cast<unsigned char>(0));
+  const auto nul = current.find(static_cast<lmbcs::char_t>(0));
   if (nul == lmbcs::view::npos) {
     return std::nullopt;
   }
@@ -79,6 +80,6 @@ auto names::get_count() const -> size_t {
   return reinterpret_cast<const NAMES_LIST*>(buffer_.data())->NumNames;
 }
 
-auto names::buffer() -> std::vector<uint8_t>& { return buffer_; }
+auto names::buffer() -> std::vector<std::byte>& { return buffer_; }
 
-auto names::buffer() const -> const std::vector<uint8_t>& { return buffer_; }
+auto names::buffer() const -> const std::vector<std::byte>& { return buffer_; }

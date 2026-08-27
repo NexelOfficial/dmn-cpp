@@ -39,12 +39,12 @@ class names {
   [[nodiscard]] auto get_count() const -> size_t;
 
   /// Get the underlying buffer.
-  [[nodiscard]] auto buffer() -> std::vector<uint8_t>&;
+  [[nodiscard]] auto buffer() -> std::vector<std::byte>&;
 
   /// Get the underlying buffer.
-  [[nodiscard]] auto buffer() const -> const std::vector<uint8_t>&;
+  [[nodiscard]] auto buffer() const -> const std::vector<std::byte>&;
 
  private:
-  std::vector<uint8_t> buffer_;
+  std::vector<std::byte> buffer_;
 };
 }  // namespace dmn::acl

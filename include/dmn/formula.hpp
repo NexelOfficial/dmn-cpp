@@ -25,7 +25,7 @@ class formula {
   void add_summary(std::string_view item_name) const;
 
   [[nodiscard]] auto get_cursor() const -> detail::locker {
-    return {get_handle(), size(), dmn::detail::ownership::borrow};
+    return {get_handle(), size(), detail::ownership::borrow};
   }
 
   [[nodiscard]] auto get_handle() const -> handle_t { return hdl_.get(); }
@@ -33,9 +33,9 @@ class formula {
  private:
   detail::uhandle<handle_t> hdl_;
 
-  formula(std::span<uint8_t> buffer);
+  formula(std::span<std::byte> buffer);
   formula();
 
-  friend struct dmn::detail::object_value<dmn::formula>;
+  friend struct detail::object_value<dmn::formula>;
 };
 }  // namespace dmn

@@ -17,6 +17,11 @@ using setter_func_t = std::function<void(dmn::type, std::span<const std::byte>)>
 template <typename T>
 struct note_value;
 
+template <typename T>
+concept has_note_value_apply = requires(const T& value, setter_func_t setter) {
+  { note_value<T>::apply(value, setter) } -> std::same_as<void>;
+};
+
 template <>
 struct note_value<std::string_view> {
   static void apply(std::string_view value, setter_func_t setter);
