@@ -26,7 +26,7 @@ class addin {
   /// Update the add-in status line.
   ///
   /// \param message Status message to display on the server console status line.
-  static void update_status(const std::string& message);
+  static void update_status(std::string_view message);
 
   /// Direct wrapper for `AddInMinutesHaveElapsed`.
   static auto minutes_elapsed(size_t minutes) -> bool;
@@ -78,7 +78,7 @@ class addin {
   detail::uhandle<detail::dhandle_t> status_hdl_;
 
   /// Internal implementation used by `dmn::addin::log`.
-  static void log_impl(const std::string& text);
+  static void log_impl(std::string_view text);
 
   addin(detail::dhandle_t handle);
 };

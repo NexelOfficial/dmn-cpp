@@ -34,7 +34,7 @@ auto addin::create(std::string_view name) -> addin {
   return {status_line};
 }
 
-void addin::update_status(const std::string& message) {
+void addin::update_status(std::string_view message) {
   auto converted = dmn::lmbcs::from_string(message);
   AddInSetStatusText(converted.data());
 }
@@ -76,7 +76,7 @@ void addin::enter_loop(const function_t& callback) const {
 
 void addin::set_log_prefix(std::string_view prefix) { prefix_.emplace(prefix); }
 
-void addin::log_impl(const std::string& text) {
+void addin::log_impl(std::string_view text) {
   // Escape percent signs
   std::string escaped;
   escaped.reserve(text.size());

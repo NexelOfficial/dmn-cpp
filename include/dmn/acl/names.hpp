@@ -26,7 +26,7 @@ class names {
   /// \param name Username to create the list for.
   /// \return Constructed names list.
   /// \throws dmn::native_error If the names list cannot be created.
-  static auto from_username(const std::string& name) -> dmn::acl::names;
+  static auto from_username(std::string_view name) -> dmn::acl::names;
 
   /// Set the authentication state for the list.
   ///

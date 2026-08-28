@@ -14,7 +14,7 @@ using dmn::acl::names;
 
 names::names() { buffer_.resize(sizeof(NAMES_LIST)); }
 
-auto names::from_username(const std::string& name) -> names {
+auto names::from_username(std::string_view name) -> names {
   detail::dhandle_t handle = {};
   auto converted = dmn::lmbcs::from_string(name);
   dmn::status result = NSFBuildNamesList(converted.data(), 0, &handle);

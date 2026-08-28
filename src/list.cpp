@@ -66,7 +66,7 @@ auto list::at(size_t index) const -> std::string {
   return dmn::lmbcs_view(data, text_size).to_string();
 }
 
-void list::push_back(const std::string& value) {
+void list::push_back(std::string_view value) {
   const auto converted = dmn::lmbcs::from_string(value);
   const size_t value_len = converted.size();
   if (value_len > MAX_UINT16) {
