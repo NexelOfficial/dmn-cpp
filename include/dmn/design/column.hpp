@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "dmn/design/color.hpp"
+#include "dmn/design/font.hpp"
 #include "dmn/lmbcs.hpp"
 #include "dmn/formula.hpp"
 #include "dmn/unid.hpp"
@@ -38,7 +39,7 @@ class view_column_format {
   uint16_t formula_size_ = 0;
   uint16_t constant_value_size_ = 0;
   uint16_t display_width_;
-  uint32_t font_id_;
+  font::id font_id_;
   uint16_t flags2_ = 0;
   number_format number_format_{};
   time_format time_format_{};
@@ -55,7 +56,7 @@ class view_column_format2 {
 
  private:
   uint16_t signature_;
-  uint32_t header_font_id_ = 0;
+  font::id header_font_id_;
   dmn::unid resort_to_view_unid_{};
   uint16_t second_resort_column_index_ = 0;
   uint16_t flags3_ = 0;
@@ -77,6 +78,8 @@ class column {
   auto set_item_name(std::string_view item_name) -> column&;
   auto set_title(std::string_view title) -> column&;
   auto set_formula(dmn::formula formula) -> column&;
+  auto set_header_font(design::font font) -> column&;
+  auto set_item_font(design::font font) -> column&;
 
  private:
   view_column_format format_;

@@ -4,9 +4,7 @@
 #include <domino/nif.h>
 #include <domino/nifcoll.h>
 #include <domino/nsfnote.h>
-#include <domino/editods.h>
 #include <domino/stdnames.h>
-#include <domino/colorid.h>
 #include <domino/viewfmt.h>
 
 #include <algorithm>
@@ -18,6 +16,7 @@
 #include <vector>
 
 #include "dmn/detail/locker.hpp"
+#include "dmn/design/font.hpp"
 #include "dmn/database.hpp"
 #include "dmn/formula.hpp"
 #include "dmn/error.hpp"
@@ -35,7 +34,10 @@ static_assert(sizeof(dmn::design::view_table_format2) == sizeof(VIEW_TABLE_FORMA
 static_assert(alignof(dmn::design::view_table_format2) == alignof(VIEW_TABLE_FORMAT2));
 
 namespace {
-auto make_item_name(uint16_t sequence) -> dmn::lmbcs { return {"$" + std::to_string(sequence)}; }
+auto make_item_name(uint16_t sequence) -> dmn::lmbcs {
+  auto name = "$" + std::to_string(sequence);
+  return {std::string_view{name}};
+}
 
 auto build_collation() -> dmn::object {
   namespace detail = dmn::detail;
@@ -68,11 +70,11 @@ view::view(dmn::note note)
       table_format2_{
         .length = ods::size(ods::type::view_table_format2),
         .background_color = design::color::white,
-        .title_font = DEFAULT_BOLD_FONT_ID,
-        .unread_font = DEFAULT_FONT_ID,
-        .totals_font = DEFAULT_FONT_ID,
+        .title_font = design::font{font::style::bold}.get_font_id(),
+        .unread_font = design::font{}.get_font_id(),
+        .totals_font = design::font{}.get_font_id(),
         .signature = VALID_VIEW_FORMAT_SIG,
-      } {}
+      } {};
 
 auto view::create(const dmn::database& db, std::string_view title) -> view {
   NOTEID noteid = 0;
@@ -90,6 +92,7 @@ auto view::create(const dmn::database& db, std::string_view title) -> view {
   NSFNoteSetInfo(note.get_handle(), _NOTE_CLASS, &note_class);
   note.set(VIEW_TITLE_ITEM, std::string(title));
   note.set(DESIGN_FLAGS, "PY");
+  note.set("$Generator", "dmn-cpp");
 
   view out{std::move(note)};
   out.selection_ = dmn::formula{"@All"};
@@ -97,7 +100,7 @@ auto view::create(const dmn::database& db, std::string_view title) -> view {
 }
 
 auto view::column(std::string_view title) -> design::column& {
-  const auto converted = dmn::lmbcs::from_string(title);
+  auto converted = dmn::lmbcs::from_string(title);
   const auto itr = std::ranges::find_if(columns_, [&](const auto& current) {
     return current.title_ == converted;
   });
@@ -105,12 +108,19 @@ auto view::column(std::string_view title) -> design::column& {
     return *itr;
   }
 
-  columns_.emplace_back();
+  design::column col{};
+  col.title_ = std::move(converted);
+  columns_.emplace_back(std::move(col));
   return columns_.back();
 }
 
 auto view::set_selection_formula(dmn::formula formula) -> view& {
   selection_ = std::move(formula);
+  return *this;
+}
+
+auto view::set_background_color(design::color color) -> view& {
+  table_format2_.background_color_ext = color;
   return *this;
 }
 

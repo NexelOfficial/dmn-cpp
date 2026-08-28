@@ -27,17 +27,17 @@ struct view_table_format {
 
 struct view_table_format2 {
   uint16_t length;
-  color background_color;
-  color v2_border_color;
-  uint32_t title_font;
-  uint32_t unread_font;
-  uint32_t totals_font;
+  design::color background_color;
+  design::color v2_border_color;
+  font::id title_font;
+  font::id unread_font;
+  font::id totals_font;
   uint16_t auto_update_seconds;
-  color alternate_background_color;
+  design::color alternate_background_color;
   uint16_t signature;
   uint8_t line_count;
   uint8_t spacing;
-  color background_color_ext;
+  design::color background_color_ext;
   uint8_t header_line_count;
   uint8_t flags1;
   std::array<uint16_t, 4> spare;
@@ -50,6 +50,7 @@ class view {
 
   auto column(std::string_view title) -> design::column&;
   auto set_selection_formula(dmn::formula formula) -> view&;
+  auto set_background_color(design::color color) -> view&;
   void save();
 
  private:

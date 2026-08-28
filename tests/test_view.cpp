@@ -2,24 +2,49 @@
 
 #include <algorithm>
 #include <array>
-#include <ios>
-#include <iostream>
 #include <string>
 #include <vector>
 
+#include "dmn/design/color.hpp"
 #include "dmn/design/view.hpp"
 #include "dmn/view.hpp"
 #include "dmn/note.hpp"
 #include "utils.hpp"
 
+namespace design = dmn::design;
+
 TEST_CASE("a view can be created through the design API", "[nsf][design]") {
   auto [db, _] = utils::random_database();
   const std::string view_name = "View_" + utils::random_small_string();
 
-  auto design_view = dmn::design::view::create(*db, view_name);
-  design_view.column("Subject").set_title("Subject").set_formula(dmn::formula{"Subject"});
-  design_view.column("Amount").set_title("Amount").set_formula(dmn::formula{"Amount"});
+  const design::font font_a(
+    design::font::size::normal, design::color::magenta, design::font::style::bold
+  );
+  const design::font font_b(
+    design::font::size::xxlarge, design::font::style::bold, design::font::style::underline
+  );
+  const design::font font_c(
+    design::font::size::small, design::font::style::italic, design::color::green
+  );
+
+  auto design_view = design::view::create(*db, view_name);
+  design_view.column("#")
+    .set_formula(dmn::formula{"\"Nr.\" + @Text(@DocNumber)"})
+    .set_header_font(font_a);
+
+  design_view.column("Subject")
+    .set_title("Document Subject")
+    .set_formula(dmn::formula{"Subject"})
+    .set_header_font(font_c)
+    .set_item_font(font_b);
+
+  design_view.column("Amount")
+    .set_formula(dmn::formula{"Amount"})
+    .set_item_font(font_a)
+    .set_header_font(font_b);
+
   design_view.set_selection_formula(dmn::formula{"@All"});
+  design_view.set_background_color(design::color::light_gray);
   design_view.save();
 
   const std::array<std::pair<std::string, double>, 3> expected_values{{
@@ -45,11 +70,13 @@ TEST_CASE("a view can be created through the design API", "[nsf][design]") {
   actual_values.reserve(entries.size());
 
   for (const auto& entry : entries) {
-    REQUIRE(entry.columns.size() == 2);
+    REQUIRE(entry.columns.size() == 3);
 
-    const auto subject = entry.columns.at(0).try_as<std::string>();
-    const auto amount = entry.columns.at(1).try_as<double>();
+    const auto nr = entry.columns.at(0).try_as<std::string>();
+    const auto subject = entry.columns.at(1).try_as<std::string>();
+    const auto amount = entry.columns.at(2).try_as<double>();
 
+    REQUIRE(nr.has_value());
     REQUIRE(subject.has_value());
     REQUIRE(amount.has_value());
 

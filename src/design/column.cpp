@@ -18,10 +18,11 @@ constexpr uint8_t DEFAULT_COLUMN_WIDTH = 80;
 view_column_format::view_column_format()
     : signature_(VIEW_COLUMN_FORMAT_SIGNATURE),
       display_width_(DEFAULT_COLUMN_WIDTH),
-      font_id_(DEFAULT_BOLD_FONT_ID),
+      font_id_(design::font{font::style::bold}.get_font_id()),
       format_data_type_(VIEW_COL_TEXT) {};
 
-view_column_format2::view_column_format2() : signature_(VIEW_COLUMN_FORMAT_SIGNATURE2) {};
+view_column_format2::view_column_format2()
+    : header_font_id_(design::font{}.get_font_id()), signature_(VIEW_COLUMN_FORMAT_SIGNATURE2) {};
 
 auto column::set_item_name(std::string_view item_name) -> column& {
   item_name_ = dmn::lmbcs::from_string(item_name);
@@ -35,5 +36,15 @@ auto column::set_title(std::string_view title) -> column& {
 
 auto column::set_formula(dmn::formula formula) -> column& {
   formula_ = std::move(formula);
+  return *this;
+}
+
+auto column::set_header_font(design::font font) -> column& {
+  format2_.header_font_id_ = font.get_font_id();
+  return *this;
+}
+
+auto column::set_item_font(design::font font) -> column& {
+  format_.font_id_ = font.get_font_id();
   return *this;
 }

@@ -25,8 +25,8 @@ enum class color : uint16_t {
 };
 
 struct color_value {
-  uint16_t flags;
-  std::array<uint8_t, 3> rgb;
-  uint8_t unused;
+  uint16_t flags = 0;
+  std::array<uint8_t, 3> rgb{};
+  uint8_t unused = 0;
 };
 }  // namespace dmn::design
