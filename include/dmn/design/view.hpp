@@ -64,5 +64,6 @@ class view {
 
   static auto open_impl(dmn::note note) -> view;
   [[nodiscard]] auto build_view_format() -> dmn::object;
+  [[nodiscard]] auto build_collation() const -> dmn::object;
 };
 }  // namespace dmn::design

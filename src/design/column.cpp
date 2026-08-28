@@ -48,3 +48,34 @@ auto column::set_item_font(design::font font) -> column& {
   format_.font_id_ = font.get_font_id();
   return *this;
 }
+
+auto column::set_sorting(sorting sort, bool categorized) -> column& {
+  constexpr WORD sort_mask = VCF1_M_Sort | VCF1_M_SortCategorize | VCF1_M_SortDescending;
+  format_.flags1_ &= ~sort_mask;
+
+  if (sort != sorting::none || categorized) {
+    format_.flags1_ |= VCF1_M_Sort;
+  }
+
+  if (sort == sorting::descending) {
+    format_.flags1_ |= VCF1_M_SortDescending;
+  }
+
+  if (categorized) {
+    format_.flags1_ |= VCF1_M_SortCategorize;
+  }
+
+  return *this;
+}
+
+auto column::get_sorting() const -> std::pair<sorting, bool> {
+  const auto flags = format_.flags1_;
+  const auto categorized = (flags & VCF1_M_SortCategorize) != 0;
+
+  if ((flags & VCF1_M_Sort) == 0) {
+    return {sorting::none, categorized};
+  }
+
+  const auto descending = (flags & VCF1_M_SortDescending) != 0;
+  return {descending ? sorting::descending : sorting::ascending, categorized};
+}

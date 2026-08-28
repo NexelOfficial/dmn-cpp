@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include "dmn/design/column.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/design/font.hpp"
 #include "dmn/database.hpp"
@@ -37,25 +38,6 @@ namespace {
 auto make_item_name(uint16_t sequence) -> dmn::lmbcs {
   auto name = "$" + std::to_string(sequence);
   return {std::string_view{name}};
-}
-
-auto build_collation() -> dmn::object {
-  namespace detail = dmn::detail;
-
-  COLLATION collation{};
-  collation.BufferSize = ods::size(ods::type::collation) + ods::size(ods::type::collate_descriptor);
-  collation.Items = 1;
-  collation.signature = COLLATION_SIGNATURE;
-
-  COLLATE_DESCRIPTOR descriptor{};
-  descriptor.signature = COLLATE_DESCRIPTOR_SIGNATURE;
-  descriptor.keytype = COLLATE_TYPE_NOTEID;
-
-  auto locker = detail::locker::allocate(collation.BufferSize + sizeof(dmn::type));
-  locker.write(dmn::type::collation);
-  locker.write(collation, ods::type::collation);
-  locker.write(descriptor, ods::type::collate_descriptor);
-  return {std::move(locker)};
 }
 }  // namespace
 
@@ -198,6 +180,54 @@ auto view::build_view_format() -> dmn::object {
 
   for (const auto& current : columns_) {
     locker.write(current.format2_, ods::type::view_column_format2);
+  }
+
+  return {std::move(locker)};
+}
+
+auto view::build_collation() const -> dmn::object {
+  size_t item_names_size = 0;
+  std::vector<const design::column*> sorted_cols;
+  for (const auto& col : columns_) {
+    if ((col.format_.flags1_ & VCF1_M_Sort) != 0) {
+      sorted_cols.push_back(&col);
+      item_names_size += col.item_name_.size();
+    }
+  }
+
+  const auto descriptors_size = ods::size(ods::type::collate_descriptor) * sorted_cols.size();
+  const auto buffer_size = ods::size(ods::type::collation) + descriptors_size + item_names_size;
+
+  const COLLATION collation{
+    .BufferSize = static_cast<uint16_t>(buffer_size),
+    .Items = static_cast<uint16_t>(sorted_cols.size()),
+    .signature = COLLATION_SIGNATURE,
+  };
+
+  auto locker = detail::locker::allocate(sizeof(dmn::type) + collation.BufferSize);
+  locker.write(dmn::type::collation);
+  locker.write(collation, ods::type::collation);
+
+  uint16_t name_offset = 0;
+  for (const auto& entry : sorted_cols) {
+    const auto [sort, categorized] = entry->get_sorting();
+    const uint8_t key_type = categorized ? COLLATE_TYPE_CATEGORY : COLLATE_TYPE_KEY;
+    const uint8_t flags = sort == design::column::sorting::descending ? CDF_M_descending : 0;
+    const COLLATE_DESCRIPTOR descriptor{
+      .Flags = flags,
+      .signature = COLLATE_DESCRIPTOR_SIGNATURE,
+      .keytype = key_type,
+      .NameOffset = name_offset,
+      .NameLength = static_cast<uint16_t>(entry->item_name_.size()),
+    };
+
+    locker.write(descriptor, ods::type::collate_descriptor);
+    name_offset += descriptor.NameLength;
+  }
+
+  for (const auto& entry : sorted_cols) {
+    const auto& item_name = entry->item_name_;
+    locker.write(std::span{item_name.c_str(), item_name.size()});
   }
 
   return {std::move(locker)};

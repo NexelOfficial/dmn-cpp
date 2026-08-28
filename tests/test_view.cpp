@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "dmn/design/color.hpp"
+#include "dmn/design/column.hpp"
 #include "dmn/design/view.hpp"
 #include "dmn/view.hpp"
 #include "dmn/note.hpp"
@@ -21,7 +22,7 @@ TEST_CASE("a view can be created through the design API", "[nsf][design]") {
     design::font::size::normal, design::color::magenta, design::font::style::bold
   );
   const design::font font_b(
-    design::font::size::xxlarge, design::font::style::bold, design::font::style::underline
+    design::font::size::xlarge, design::font::style::bold, design::font::style::underline
   );
   const design::font font_c(
     design::font::size::small, design::font::style::italic, design::color::green
@@ -30,13 +31,15 @@ TEST_CASE("a view can be created through the design API", "[nsf][design]") {
   auto design_view = design::view::create(*db, view_name);
   design_view.column("#")
     .set_formula(dmn::formula{"\"Nr.\" + @Text(@DocNumber)"})
-    .set_header_font(font_a);
+    .set_header_font(font_a)
+    .set_sorting(design::column::sorting::descending, true);
 
   design_view.column("Subject")
     .set_title("Document Subject")
     .set_formula(dmn::formula{"Subject"})
     .set_header_font(font_c)
-    .set_item_font(font_b);
+    .set_item_font(font_b)
+    .set_sorting(design::column::sorting::ascending, true);
 
   design_view.column("Amount")
     .set_formula(dmn::formula{"Amount"})

@@ -73,6 +73,8 @@ class view_column_format2 {
 
 class column {
  public:
+  enum class sorting : uint8_t { none, ascending, descending };
+
   column() : formula_(dmn::formula{"@DocNumber"}) {};
 
   auto set_item_name(std::string_view item_name) -> column&;
@@ -80,6 +82,9 @@ class column {
   auto set_formula(dmn::formula formula) -> column&;
   auto set_header_font(design::font font) -> column&;
   auto set_item_font(design::font font) -> column&;
+  auto set_sorting(sorting sort, bool categorized = false) -> column&;
+
+  [[nodiscard]] auto get_sorting() const -> std::pair<sorting, bool>;
 
  private:
   view_column_format format_;
