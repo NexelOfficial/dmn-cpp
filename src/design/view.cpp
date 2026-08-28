@@ -17,11 +17,11 @@
 #include <utility>
 #include <vector>
 
-#include "dmn/database.hpp"
-#include "dmn/detail/lmbcs.hpp"
 #include "dmn/detail/locker.hpp"
-#include "dmn/error.hpp"
+#include "dmn/database.hpp"
 #include "dmn/formula.hpp"
+#include "dmn/error.hpp"
+#include "dmn/lmbcs.hpp"
 #include "dmn/note.hpp"
 #include "dmn/type.hpp"
 
@@ -35,9 +35,7 @@ static_assert(sizeof(dmn::design::view_table_format2) == sizeof(VIEW_TABLE_FORMA
 static_assert(alignof(dmn::design::view_table_format2) == alignof(VIEW_TABLE_FORMAT2));
 
 namespace {
-auto make_item_name(uint16_t sequence) -> dmn::lmbcs::str {
-  return dmn::lmbcs::translate("$" + std::to_string(sequence));
-}
+auto make_item_name(uint16_t sequence) -> dmn::lmbcs { return {"$" + std::to_string(sequence)}; }
 
 auto build_collation() -> dmn::object {
   namespace detail = dmn::detail;
@@ -78,9 +76,9 @@ view::view(dmn::note note)
 
 auto view::create(const dmn::database& db, std::string_view title) -> view {
   NOTEID noteid = 0;
-  const lmbcs::str converted = lmbcs::translate(title);
+  const auto converted = dmn::lmbcs::from_string(title);
   const dmn::status result = NIFFindDesignNoteExt(
-    db.get_handle(), lmbcs::cast(converted), NOTE_CLASS_VIEW, DFLAGPAT_VIEW, &noteid, 0
+    db.get_handle(), converted.c_str(), NOTE_CLASS_VIEW, DFLAGPAT_VIEW, &noteid, 0
   );
   if (!result.is_not_found()) {
     result.throw_if_error("Failed to check for existing view design");
@@ -99,7 +97,7 @@ auto view::create(const dmn::database& db, std::string_view title) -> view {
 }
 
 auto view::column(std::string_view title) -> design::column& {
-  const auto converted = lmbcs::translate(title);
+  const auto converted = dmn::lmbcs::from_string(title);
   const auto itr = std::ranges::find_if(columns_, [&](const auto& current) {
     return current.title_ == converted;
   });
@@ -170,8 +168,8 @@ auto view::build_view_format() -> dmn::object {
     const auto& formula = current.formula_;
     const auto cursor = formula.get_cursor();
 
-    locker.write(std::span{item_name.data(), item_name.size()});
-    locker.write(std::span{title.data(), title.size()});
+    locker.write(std::span{item_name.c_str(), item_name.size()});
+    locker.write(std::span{title.c_str(), title.size()});
     locker.write(std::span{cursor.get_pointer(), cursor.size()});
 
     selection_.add_summary(item_name);

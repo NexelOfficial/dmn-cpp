@@ -26,12 +26,12 @@ class formula {
 
   [[nodiscard]] auto decompile(bool is_selection_formula = false) const -> std::string;
   [[nodiscard]] auto size() const -> size_t;
-  
+
   void merge(const formula& other) const;
   void add_summary(std::string_view item_name) const;
-  void add_summary(lmbcs::view item_name) const;
+  void add_summary(dmn::lmbcs_view item_name) const;
   void add_item_name(std::string_view item_name) const;
-  void add_item_name(lmbcs::view item_name) const;
+  void add_item_name(dmn::lmbcs_view item_name) const;
 
   [[nodiscard]] auto get_cursor() const -> detail::locker {
     return {get_handle(), size(), detail::ownership::borrow};

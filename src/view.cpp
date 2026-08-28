@@ -113,8 +113,8 @@ auto view::open(const dmn::database& db, std::string_view view_name) -> std::opt
   const dmn::database::handle_t db_handle = db.get_handle();
 
   NOTEID view_noteid = 0;
-  const lmbcs::str converted = lmbcs::translate(view_name);
-  dmn::status result = NIFFindView(db_handle, lmbcs::cast(converted), &view_noteid);
+  const auto converted = dmn::lmbcs::from_string(view_name);
+  dmn::status result = NIFFindView(db_handle, converted.c_str(), &view_noteid);
   if (result.is_not_found()) {
     return std::nullopt;
   }
@@ -139,9 +139,9 @@ void view::iterate(const query_options& opts, const function_t& func) const {
 
   DWORD num_matches = std::numeric_limits<uint32_t>::max();
 
-  const lmbcs::str converted = lmbcs::translate(*opts.key);
-  const size_t text_len = converted.size();
-  const size_t total = sizeof(key_buffer_data) + text_len;
+  const auto converted = dmn::lmbcs::from_string(*opts.key);
+  const auto text_len = converted.size();
+  const auto total = sizeof(key_buffer_data) + text_len;
   std::vector<char> buf(total);
 
   const std::span<char> ptr(buf.data(), buf.size());

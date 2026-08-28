@@ -1,6 +1,6 @@
 #include "dmn/detail/object_value.hpp"
 
-#include "dmn/detail/lmbcs.hpp"
+#include "dmn/lmbcs.hpp"
 #include "dmn/type.hpp"
 
 using dmn::detail::object_value;
@@ -10,10 +10,10 @@ auto object_value<std::string>::convert(detail::cursor& cs) -> std::optional<std
     return std::nullopt;
   }
 
-  // Use pointer with lmbcs::view instead of obj.read() to prevent double allocation
-  auto* ptr = cs.get_pointer<lmbcs::char_t>();
-  const lmbcs::view value(ptr, cs.size() - sizeof(dmn::type));
-  return lmbcs::translate(value);
+  // Use pointer with dmn::lmbcs_view instead of obj.read() to prevent double allocation
+  auto* ptr = cs.get_pointer<dmn::lmbcs::char_t>();
+  const dmn::lmbcs_view value(ptr, cs.size() - sizeof(dmn::type));
+  return value.to_string();
 }
 
 auto object_value<std::string>::is(detail::cursor& cs) -> bool {

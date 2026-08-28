@@ -22,8 +22,8 @@ auto addin::create(std::string_view name) -> addin {
   AddInQueryDefaults(&module_handle, &temp_status_line);
   AddInDeleteStatusLine(temp_status_line);
 
-  lmbcs::str converted = lmbcs::translate(name);
-  const detail::dhandle_t status_line = AddInCreateStatusLine(lmbcs::cast(converted));
+  auto converted = dmn::lmbcs::from_string(name);
+  const detail::dhandle_t status_line = AddInCreateStatusLine(converted.data());
   if (status_line == detail::dhandle_t{}) {
     throw dmn::runtime_error("Failed to create status line");
   }
@@ -35,8 +35,8 @@ auto addin::create(std::string_view name) -> addin {
 }
 
 void addin::update_status(const std::string& message) {
-  lmbcs::str converted = lmbcs::translate(message);
-  AddInSetStatusText(lmbcs::cast(converted));
+  auto converted = dmn::lmbcs::from_string(message);
+  AddInSetStatusText(converted.data());
 }
 
 auto addin::minutes_elapsed(size_t minutes) -> bool {
@@ -88,8 +88,8 @@ void addin::log_impl(const std::string& text) {
     }
   }
 
-  lmbcs::str converted = lmbcs::translate(escaped);
-  AddInLogMessageText(lmbcs::cast(converted), dmn::no_error.value);
+  auto converted = dmn::lmbcs::from_string(escaped);
+  AddInLogMessageText(converted.data(), dmn::no_error.value);
 }
 
 addin::addin(detail::dhandle_t handle) : status_hdl_(handle, AddInDeleteStatusLine) {};

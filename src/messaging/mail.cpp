@@ -8,7 +8,7 @@
 #include <cstring>
 
 #include "dmn/messaging/mime.hpp"
-#include "dmn/detail/lmbcs.hpp"
+#include "dmn/lmbcs.hpp"
 #include "dmn/error.hpp"
 
 using dmn::mail;
@@ -18,8 +18,8 @@ mail::mail() : file_hdl_(MailCloseMessageFile), msg_hdl_(MailCloseMessage) {}
 auto mail::create(const std::optional<std::string>& name) -> mail {
   // Open the mail message
   mail new_mail = {};
-  lmbcs::str converted = name ? lmbcs::translate(*name) : lmbcs::str{};
-  dmn::status result = MailOpenMessageFile(lmbcs::cast(converted), new_mail.file_hdl_.data());
+  auto converted = name ? dmn::lmbcs::from_string(*name) : dmn::lmbcs{};
+  dmn::status result = MailOpenMessageFile(converted.data(), new_mail.file_hdl_.data());
   result.throw_if_error("Failed to open message file");
 
   // Create the actual mail
@@ -76,10 +76,10 @@ void mail::send(const std::string& from, const std::string& subject) {
   // Add mandatory headers
   add_header_item(MAIL_FORM_ITEM_NUM, MAIL_MEMO_FORM, strlen(MAIL_MEMO_FORM));
 
-  const lmbcs::str conv_from = lmbcs::translate(from);
+  const auto conv_from = dmn::lmbcs::from_string(from);
   add_header_item(MAIL_FROM_ITEM_NUM, conv_from.c_str(), from.size());
 
-  const lmbcs::str subject_from = lmbcs::translate(subject);
+  const auto subject_from = dmn::lmbcs::from_string(subject);
   add_header_item(MAIL_SUBJECT_ITEM_NUM, subject_from.c_str(), subject.size());
 
   TIMEDATE now = {};

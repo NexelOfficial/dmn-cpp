@@ -18,8 +18,8 @@ auto messages::open(std::string_view name) -> messages {
 
   handle_t handle = {};
   const std::string final_name = std::format("{}{}", TASK_QUEUE_PREFIX, name);
-  const lmbcs::str converted = lmbcs::translate(final_name);
-  const dmn::status result = MQOpen(lmbcs::cast(converted), MQ_OPEN_CREATE, &handle);
+  const auto converted = dmn::lmbcs::from_string(final_name);
+  const dmn::status result = MQOpen(converted.c_str(), MQ_OPEN_CREATE, &handle);
   result.throw_if_error("Failed to create MQ");
 
   return {handle};

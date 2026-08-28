@@ -1,12 +1,12 @@
 #include "dmn/detail/note_value.hpp"
 
-#include "dmn/detail/lmbcs.hpp"
+#include "dmn/lmbcs.hpp"
 
 using dmn::detail::note_value;
 
 void note_value<std::string_view>::apply(std::string_view value, setter_func_t setter) {
-  const auto converted = lmbcs::translate(value);
-  const std::span span{converted.data(), converted.size()};
+  const auto converted = dmn::lmbcs::from_string(value);
+  const std::span span{converted.c_str(), converted.size()};
   std::invoke(setter, dmn::type::text, std::as_bytes(span));
 }
 

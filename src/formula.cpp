@@ -4,8 +4,8 @@
 #include <domino/nsfsearc.h>
 #include <domino/osmem.h>
 
-#include "dmn/detail/lmbcs.hpp"
 #include "dmn/detail/locker.hpp"
+#include "dmn/lmbcs.hpp"
 #include "dmn/error.hpp"
 
 using dmn::formula;
@@ -20,9 +20,9 @@ formula::formula(std::span<std::byte> buffer) : hdl_(OSMemFree) {
 formula::formula(std::string_view command) : hdl_(OSMemFree) {
   uint16_t skip = 0;
   dmn::status compile_error = dmn::no_error;
-  const auto converted = lmbcs::translate(command);
+  const auto converted = dmn::lmbcs::from_string(command);
   const dmn::status result = NSFFormulaCompile(
-    nullptr, 0, lmbcs::cast(converted), converted.size(), hdl_.data(), &skip, &compile_error.value,
+    nullptr, 0, converted.c_str(), converted.size(), hdl_.data(), &skip, &compile_error.value,
     &skip, &skip, &skip, &skip
   );
   compile_error.throw_if_error("Compile error");
@@ -40,8 +40,8 @@ auto formula::decompile(bool is_selection_formula) const -> std::string {
   result.throw_if_error("Failed to decompile formula");
 
   const detail::locker output(text_hdl, text_len);
-  const lmbcs::view raw(output.get_pointer<lmbcs::char_t>(), text_len);
-  return lmbcs::translate(raw);
+  const dmn::lmbcs_view raw(output.get_pointer<dmn::lmbcs::char_t>(), text_len);
+  return raw.to_string();
 }
 
 auto formula::size() const -> size_t {
@@ -56,20 +56,20 @@ void formula::merge(const formula& other) const {
 }
 
 void formula::add_summary(std::string_view item_name) const {
-  add_summary(lmbcs::translate(item_name));
+  add_summary(dmn::lmbcs::from_string(item_name));
 }
 
-void formula::add_summary(lmbcs::view item_name) const {
+void formula::add_summary(dmn::lmbcs_view item_name) const {
   const dmn::status result =
-    NSFFormulaSummaryItem(get_handle(), lmbcs::cast(item_name), item_name.size());
+    NSFFormulaSummaryItem(get_handle(), item_name.data(), item_name.size());
   result.throw_if_error("Failed to add summary item to formula");
 }
 
 void formula::add_item_name(std::string_view item_name) const {
-  add_item_name(lmbcs::translate(item_name));
+  add_item_name(dmn::lmbcs::from_string(item_name));
 }
 
-void formula::add_item_name(lmbcs::view item_name) const {
+void formula::add_item_name(dmn::lmbcs_view item_name) const {
   header hdr{};
   {
     auto cursor = get_cursor();
@@ -104,7 +104,7 @@ void formula::add_item_name(lmbcs::view item_name) const {
   cursor.set_offset(0);
   cursor.write(new_hdr);
   cursor.write(static_cast<uint16_t>(item_name.size()));
-  cursor.write(std::as_bytes(std::span{item_name.data(), item_name.size()}));
+  cursor.write(std::span{item_name.data(), item_name.size()});
 
   if (padding != 0) {
     cursor.write(std::byte{0});

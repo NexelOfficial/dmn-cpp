@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <regex>
@@ -9,7 +10,7 @@
 #include "dmn/detail/note_value.hpp"
 #include "dmn/detail/object_value.hpp"
 #include "dmn/detail/uhandle.hpp"
-#include "dmn/detail/lmbcs.hpp"
+#include "dmn/lmbcs.hpp"
 #include "dmn/object.hpp"
 #include "dmn/type.hpp"
 #include "dmn/database.hpp"
@@ -60,7 +61,7 @@ class note {
   /// \param path Path to the file to attach.
   /// \throws dmn::native_error If the attachment cannot be embedded.
   /// \throws dmn::invalid_handle If the underlying handle is empty.
-  void embed_element(const std::string& name, const std::string& path) const;
+  void embed_element(std::string_view name, const std::filesystem::path& path) const;
 
   /// Embed a file attachment in the note with a random name.
   ///
@@ -68,7 +69,7 @@ class note {
   /// \throws dmn::native_error If the attachment cannot be embedded.
   /// \throws dmn::invalid_handle If the underlying handle is empty.
   /// \note File extension of the provided path is preserved.
-  void embed_element(const std::string& path) const;
+  void embed_element(const std::filesystem::path& path) const;
 
   /// Compute the note using its associated form.
   ///
@@ -122,7 +123,7 @@ class note {
   template <typename T>
     requires detail::has_object_convert<T> || std::is_same_v<T, dmn::object>
   [[nodiscard]] auto get(std::string_view key) const -> std::optional<T> {
-    const lmbcs::str converted = lmbcs::translate(key);
+    const auto converted = dmn::lmbcs::from_string(key);
     auto value = get_impl(converted);
     if (!value) {
       return std::nullopt;
@@ -186,7 +187,7 @@ class note {
   void get_info_impl(dmn::info key, void* out) const;
 
   /// Internal implementation used by `dmn::note::get()`.
-  [[nodiscard]] auto get_impl(const lmbcs::str& key) const -> std::optional<dmn::object>;
+  [[nodiscard]] auto get_impl(dmn::lmbcs_view key) const -> std::optional<dmn::object>;
 
   /// Internal implementation used by `dmn::note::set()`.
   void append_impl(std::string_view key, dmn::type type, std::span<const std::byte> buffer) const;

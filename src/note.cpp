@@ -78,8 +78,8 @@ auto note::create(dmn::database db) -> note {
 }
 
 auto note::has(std::string_view key) const -> bool {
-  const lmbcs::str converted = lmbcs::translate(key);
-  return NSFItemIsPresent(get_handle(), lmbcs::cast(converted), converted.size());
+  const auto converted = dmn::lmbcs::from_string(key);
+  return NSFItemIsPresent(get_handle(), converted.c_str(), converted.size());
 }
 
 auto note::copy_to_database(const dmn::database& db) const -> std::optional<note> {
@@ -97,17 +97,17 @@ auto note::copy_to_database(const dmn::database& db) const -> std::optional<note
   return note::open(db, new_noteid);
 }
 
-void note::embed_element(const std::string& name, const std::string& path) const {
-  const lmbcs::str conv_name = lmbcs::translate(name);
-  const lmbcs::str conv_path = lmbcs::translate(path);
+void note::embed_element(std::string_view name, const std::filesystem::path& path) const {
+  const auto conv_name = dmn::lmbcs::from_string(name);
+  const auto conv_path = dmn::lmbcs::from_string(path.string());
   const dmn::status result = NSFNoteAttachFile(
-    get_handle(), ITEM_NAME_ATTACHMENT, strlen(ITEM_NAME_ATTACHMENT), lmbcs::cast(conv_path),
-    lmbcs::cast(conv_name), COMPRESS_LZ1 | HOST_LOCAL
+    get_handle(), ITEM_NAME_ATTACHMENT, strlen(ITEM_NAME_ATTACHMENT), conv_path.c_str(),
+    conv_name.c_str(), COMPRESS_LZ1 | HOST_LOCAL
   );
   result.throw_if_error("Failed to embed element");
 }
 
-void note::embed_element(const std::string& path) const {
+void note::embed_element(const std::filesystem::path& path) const {
   constexpr static uint8_t ATTACHMENT_NAME_LEN = 5;
   constexpr static std::string_view RAND_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   static std::random_device rd{};
@@ -119,9 +119,7 @@ void note::embed_element(const std::string& path) const {
     rand_name += RAND_CHARSET.at(distrib(gen));
   }
 
-  const std::filesystem::path file_path{path};
-  const auto ext = file_path.has_extension() ? file_path.extension().string() : "";
-
+  const auto ext = path.has_extension() ? path.extension().string() : "";
   embed_element("ATT" + rand_name + ext, path);
 }
 
@@ -132,18 +130,18 @@ void note::compute_with_form() const {
 }
 
 auto note::get_type(std::string_view key) const -> dmn::type {
-  const lmbcs::str converted = lmbcs::translate(key);
+  const auto converted = dmn::lmbcs::from_string(key);
   auto data_type = dmn::type::invalid_or_unknown;
   NSFItemInfo(
-    get_handle(), lmbcs::cast(converted), converted.size(), nullptr,
+    get_handle(), converted.c_str(), converted.size(), nullptr,
     reinterpret_cast<uint16_t*>(&data_type), nullptr, nullptr
   );
   return data_type;
 }
 
 void note::erase(std::string_view key) const {
-  const lmbcs::str converted = lmbcs::translate(key);
-  const dmn::status result = NSFItemDelete(get_handle(), lmbcs::cast(converted), converted.size());
+  const auto converted = dmn::lmbcs::from_string(key);
+  const dmn::status result = NSFItemDelete(get_handle(), converted.c_str(), converted.size());
   result.throw_if_error("Failed to remove key");
 }
 
@@ -169,18 +167,19 @@ auto note::items(std::optional<std::regex> pattern) const -> object_map_t {
   object_map_t output{};
   while (!result.is_not_found()) {
     detail::block_id value_bid{};
+    uint16_t name_len = 0;
     DWORD value_len = 0;
 
-    lmbcs::str name(MAX_FIELD_NAME_LEN, '\0');
-    uint16_t name_len = 0;
+    dmn::lmbcs name;
+    name.resize(MAX_FIELD_NAME_LEN);
 
     NSFItemQuery(
-      hdl, item_bid, lmbcs::cast(name), name.size(), &name_len, nullptr, nullptr,
+      hdl, item_bid, name.data(), name.size(), &name_len, nullptr, nullptr,
       reinterpret_cast<BLOCKID*>(&value_bid), &value_len
     );
-
     name.resize(name_len);
-    std::string converted = lmbcs::translate(name);
+
+    auto converted = name.to_string();
     auto owner = std::make_shared<dmn::note>(*this);
     auto obj = dmn::object{value_bid, value_len, owner};
 
@@ -206,14 +205,14 @@ void note::get_info_impl(dmn::info key, void* out) const {
   NSFNoteGetInfo(get_handle(), raw_info, out);
 }
 
-auto note::get_impl(const lmbcs::str& key) const -> std::optional<dmn::object> {
+auto note::get_impl(dmn::lmbcs_view key) const -> std::optional<dmn::object> {
   detail::block_id item_bid{};
   uint16_t item_type = 0;
   detail::block_id value_bid{};
   DWORD value_len = 0;
 
   const dmn::status result = NSFItemInfo(
-    get_handle(), lmbcs::cast(key), key.size(), reinterpret_cast<BLOCKID*>(&item_bid), &item_type,
+    get_handle(), key.data(), key.size(), reinterpret_cast<BLOCKID*>(&item_bid), &item_type,
     reinterpret_cast<BLOCKID*>(&value_bid), &value_len
   );
 
@@ -226,19 +225,23 @@ auto note::get_impl(const lmbcs::str& key) const -> std::optional<dmn::object> {
   return dmn::object{value_bid, value_len, owner, item_bid};
 }
 
-void note::append_impl(std::string_view key, dmn::type type, std::span<const std::byte> buffer) const {
-  const lmbcs::str converted = lmbcs::translate(key);
+void note::append_impl(
+  std::string_view key, dmn::type type, std::span<const std::byte> buffer
+) const {
+  const auto converted = dmn::lmbcs::from_string(key);
   const auto data_type = static_cast<uint16_t>(type);
   const auto size = buffer.size();
 
   const dmn::status result = NSFItemAppend(
-    get_handle(), get_flags(size), lmbcs::cast(converted), converted.size(), data_type,
-    buffer.data(), size
+    get_handle(), get_flags(size), converted.c_str(), converted.size(), data_type, buffer.data(),
+    size
   );
   result.throw_if_error("Failed to append item value");
 }
 
-void note::modify_impl(std::string_view key, dmn::type type, std::span<const std::byte> buffer) const {
+void note::modify_impl(
+  std::string_view key, dmn::type type, std::span<const std::byte> buffer
+) const {
   auto existing = get<dmn::object>(key);
   if (!existing) {
     throw dmn::invalid_argument("Provided key doesn't exist on note");

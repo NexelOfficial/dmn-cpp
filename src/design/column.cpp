@@ -24,12 +24,12 @@ view_column_format::view_column_format()
 view_column_format2::view_column_format2() : signature_(VIEW_COLUMN_FORMAT_SIGNATURE2) {};
 
 auto column::set_item_name(std::string_view item_name) -> column& {
-  item_name_ = lmbcs::translate(item_name);
+  item_name_ = dmn::lmbcs::from_string(item_name);
   return *this;
 }
 
 auto column::set_title(std::string_view title) -> column& {
-  title_ = lmbcs::translate(title);
+  title_ = dmn::lmbcs::from_string(title);
   return *this;
 }
 

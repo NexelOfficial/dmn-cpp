@@ -11,10 +11,10 @@
 #include <optional>
 
 #include "dmn/addin/session.hpp"
-#include "dmn/detail/lmbcs.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/acl/manager.hpp"
 #include "dmn/acl/names.hpp"
+#include "dmn/lmbcs.hpp"
 #include "dmn/error.hpp"
 #include "dmn/agent.hpp"
 #include "dmn/note.hpp"
@@ -32,8 +32,8 @@ database::database(handle_t handle)
 auto database::create(std::string_view file) -> std::optional<database> {
   (void)dmn::session::instance();
 
-  const lmbcs::str converted = lmbcs::translate(file);
-  const dmn::status result = NSFDbCreate(lmbcs::cast(converted), DBCLASS_NOTEFILE, FALSE);
+  const auto converted = dmn::lmbcs::from_string(file);
+  const dmn::status result = NSFDbCreate(converted.c_str(), DBCLASS_NOTEFILE, FALSE);
   result.throw_if_error("Failed to create database");
   return database::open(file, {});
 }
@@ -41,8 +41,8 @@ auto database::create(std::string_view file) -> std::optional<database> {
 void database::remove(std::string_view file) {
   (void)dmn::session::instance();
 
-  const lmbcs::str converted = lmbcs::translate(file);
-  const dmn::status result = NSFDbDelete(lmbcs::cast(converted));
+  const auto converted = dmn::lmbcs::from_string(file);
+  const dmn::status result = NSFDbDelete(converted.c_str());
   result.throw_if_error("Failed to remove database");
 }
 
@@ -62,9 +62,9 @@ auto database::open(std::string_view file, const dmn::acl::names& names)
   const detail::dhandle_t names_hdl = names_obj ? names_obj->get_handle() : NULLHANDLE;
 
   handle_t handle = {};
-  const lmbcs::str converted = lmbcs::translate(file);
+  const auto converted = dmn::lmbcs::from_string(file);
   const dmn::status result =
-    NSFDbOpenExtended(lmbcs::cast(converted), 0, names_hdl, nullptr, &handle, nullptr, nullptr);
+    NSFDbOpenExtended(converted.c_str(), 0, names_hdl, nullptr, &handle, nullptr, nullptr);
 
   if (result.is_not_found()) {
     return std::nullopt;
@@ -86,13 +86,13 @@ auto database::get_access_level(dmn::acl::names& names) const -> uint16_t {
 auto database::run_query(const dmn::dql::expression& query, size_t limit) const
   -> std::vector<dmn::note> {
   const auto input = dmn::dql::render(query);
-  auto converted = lmbcs::translate(input);
+  auto converted = dmn::lmbcs::from_string(input);
 
   detail::dhandle_t table_hdl = {};
   MEMHANDLE error_hdl = {};
   MEMHANDLE explain_hdl = {};
   const dmn::status result = NSFQueryDBExt2(
-    get_handle(), lmbcs::cast(converted), converted.size(), 0, 0, 0, 0, &table_hdl, &error_hdl,
+    get_handle(), converted.data(), converted.size(), 0, 0, 0, 0, &table_hdl, &error_hdl,
     &explain_hdl, NULLMEMHANDLE
   );
   result.throw_if_error("Failed to run DQL query");
@@ -135,14 +135,15 @@ auto database::get_agent(std::string_view name) const -> std::optional<dmn::agen
 }
 
 auto database::get_path() const -> std::string {
-  lmbcs::str raw_path(MAXPATH, '\0');
-  const dmn::status result = NSFDbPathGet(get_handle(), lmbcs::cast(raw_path), nullptr);
+  dmn::lmbcs raw_path;
+  raw_path.resize(MAXPATH);
+
+  const dmn::status result = NSFDbPathGet(get_handle(), raw_path.data(), nullptr);
   result.throw_if_error("Failed to get database path");
 
-  raw_path.resize(strlen(lmbcs::cast(raw_path)));
+  raw_path.resize(strlen(raw_path.c_str()));
 
   // Make path HTTP safe
   std::ranges::transform(raw_path, raw_path.begin(), [](auto& c) { return c == '\\' ? '/' : c; });
-
-  return lmbcs::translate(raw_path);
+  return raw_path.to_string();
 }

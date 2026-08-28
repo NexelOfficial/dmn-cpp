@@ -4,10 +4,10 @@
 #include <domino/agents.h>
 #include <domino/nif.h>
 
+#include "dmn/detail/locker.hpp"
 #include "dmn/database.hpp"
 #include "dmn/error.hpp"
-#include "dmn/detail/lmbcs.hpp"
-#include "dmn/detail/locker.hpp"
+#include "dmn/lmbcs.hpp"
 
 using dmn::agent;
 
@@ -20,15 +20,14 @@ agent::agent(dmn::database db, handle_t handle) : hdl_(handle, AgentClose), db_(
 
 auto agent::open(const dmn::database& db, std::string_view name) -> std::optional<agent> {
   const dmn::database::handle_t db_handle = db.get_handle();
-  const lmbcs::str converted = lmbcs::translate(name);
+  const auto converted = dmn::lmbcs::from_string(name);
 
   dmn::note_id agent_id{};
   dmn::status result =
-    NIFFindDesignNote(db_handle, lmbcs::cast(converted), NOTE_CLASS_FILTER, agent_id.data());
+    NIFFindDesignNote(db_handle, converted.c_str(), NOTE_CLASS_FILTER, agent_id.data());
   if (result.is_error()) {
-    result = NIFFindPrivateDesignNote(
-      db_handle, lmbcs::cast(converted), NOTE_CLASS_FILTER, agent_id.data()
-    );
+    result =
+      NIFFindPrivateDesignNote(db_handle, converted.c_str(), NOTE_CLASS_FILTER, agent_id.data());
     if (result.is_not_found()) {
       return std::nullopt;
     }
@@ -80,8 +79,8 @@ auto agent::run(const std::optional<dmn::note>& note) const -> std::optional<std
 
   try {
     auto out_obj = detail::locker(out_hdl, out_len, detail::ownership::borrow);
-    auto view = lmbcs::view(out_obj.get_pointer<lmbcs::char_t>(), out_len);
-    return lmbcs::translate(view);
+    auto view = dmn::lmbcs_view(out_obj.get_pointer<dmn::lmbcs::char_t>(), out_len);
+    return view.to_string();
   } catch (...) {
     return std::nullopt;
   }

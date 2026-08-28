@@ -4,7 +4,7 @@
 #include <string_view>
 
 #include "dmn/design/color.hpp"
-#include "dmn/detail/lmbcs.hpp"
+#include "dmn/lmbcs.hpp"
 #include "dmn/formula.hpp"
 #include "dmn/unid.hpp"
 
@@ -82,8 +82,8 @@ class column {
   view_column_format format_;
   view_column_format2 format2_;
   dmn::formula formula_;
-  lmbcs::str item_name_;
-  lmbcs::str title_;
+  dmn::lmbcs item_name_;
+  dmn::lmbcs title_;
 
   friend class view;
 };
