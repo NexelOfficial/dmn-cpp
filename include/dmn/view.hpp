@@ -75,7 +75,9 @@ class view {
   static auto open(const dmn::database& db, std::string_view view_name) -> std::optional<view>;
 
   /// Internal implementation used by `iterate()`.
-  void iterate_entries(void* position_ptr, const query_options& opts, const function_t& func) const;
+  void iterate_entries(
+    void* position_ptr, const query_options& opts, const function_t& func, uint32_t available
+  ) const;
 
   view(dmn::database db, handle_t handle);
 
