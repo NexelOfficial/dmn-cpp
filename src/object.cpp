@@ -52,9 +52,9 @@ auto object::as_string() const -> std::optional<std::string> {
   const size_t data_size = state_->size - sizeof(typ);
 
   if (typ == dmn::type::text) {
-    // Use pointer with lmbcs::view instead of obj.read() to prevent double allocation
-    const lmbcs::view value(obj.get_pointer<lmbcs::char_t>(), data_size);
-    return lmbcs::translate(value);
+    // Use pointer with dmn::lmbcs_view instead of obj.read() to prevent double allocation
+    const dmn::lmbcs_view value(obj.get_pointer<dmn::lmbcs::char_t>(), data_size);
+    return value.to_string();
   }
   if (typ == dmn::type::number && data_size == sizeof(double)) {
     constexpr static uint8_t MAX_DOUBLE_SIZE = 32;
@@ -90,8 +90,8 @@ auto object::as_string() const -> std::optional<std::string> {
 
     std::string output;
     for (const auto& len : lengths) {
-      const lmbcs::view out(obj.get_pointer<lmbcs::char_t>(), len);
-      output += lmbcs::translate(out) + ";";
+      const dmn::lmbcs_view out(obj.get_pointer<dmn::lmbcs::char_t>(), len);
+      output += out.to_string() + ";";
       obj.advance_offset(len);
     }
 

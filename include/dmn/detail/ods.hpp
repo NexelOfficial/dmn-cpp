@@ -225,7 +225,7 @@ enum class type : uint16_t {
 };
 
 /// Gets the binary size of the provided type
-auto size(ods::type typ) -> size_t;
+auto size(ods::type typ) -> uint16_t;
 
 /// Determines whether to use `std::memcpy` or `ODSWriteMemory` and does the write
 void write(void* dst, const void* src, ods::type typ);

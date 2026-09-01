@@ -5,7 +5,7 @@
 #include <optional>
 #include <string>
 
-#include "dmn/detail/lmbcs.hpp"
+#include "dmn/lmbcs.hpp"
 
 namespace dmn {
 struct status {
@@ -79,7 +79,7 @@ struct native_error : error {
   status code_;
 
   /// Loads the error message for a code.
-  [[nodiscard]] static auto os_load_string(status code) -> std::optional<lmbcs::str>;
+  [[nodiscard]] static auto os_load_string(status code) -> std::optional<dmn::lmbcs>;
 
   /// Get the error message for a code.
   [[nodiscard]] static auto get_error_message(std::string message, status code) -> std::string;

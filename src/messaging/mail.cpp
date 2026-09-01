@@ -8,18 +8,18 @@
 #include <cstring>
 
 #include "dmn/messaging/mime.hpp"
-#include "dmn/detail/lmbcs.hpp"
+#include "dmn/lmbcs.hpp"
 #include "dmn/error.hpp"
 
 using dmn::mail;
 
 mail::mail() : file_hdl_(MailCloseMessageFile), msg_hdl_(MailCloseMessage) {}
 
-auto mail::create(const std::optional<std::string>& name) -> mail {
+auto mail::create(std::optional<std::string_view> mailbox) -> mail {
   // Open the mail message
   mail new_mail = {};
-  lmbcs::str converted = name ? lmbcs::translate(*name) : lmbcs::str{};
-  dmn::status result = MailOpenMessageFile(lmbcs::cast(converted), new_mail.file_hdl_.data());
+  auto converted = mailbox ? dmn::lmbcs::from_string(*mailbox) : dmn::lmbcs{};
+  dmn::status result = MailOpenMessageFile(converted.data(), new_mail.file_hdl_.data());
   result.throw_if_error("Failed to open message file");
 
   // Create the actual mail
@@ -29,21 +29,21 @@ auto mail::create(const std::optional<std::string>& name) -> mail {
   return new_mail;
 }
 
-void mail::set_body(const std::string& body, const std::optional<std::string>& content_type) const {
+void mail::set_body(std::string body, std::string content_type) const {
   dmn::mime::open(*this)
-    .set_content_type(content_type.value_or("text/html"))
+    .set_content_type(std::move(content_type))
     .set_charset("UTF-8")
-    .append_content(body)
+    .append_content(std::move(body))
     .write_to(*this, MAIL_BODY_ITEM);
 }
 
-void mail::add_send_to(const std::string& email) { add_to_list(send_to_, email); }
+void mail::add_send_to(std::string_view email) { add_to_list(send_to_, email); }
 
-void mail::add_copy_to(const std::string& email) { add_to_list(copy_to_, email); }
+void mail::add_copy_to(std::string_view email) { add_to_list(copy_to_, email); }
 
-void mail::add_blind_copy_to(const std::string& email) { add_to_list(blind_copy_to_, email); }
+void mail::add_blind_copy_to(std::string_view email) { add_to_list(blind_copy_to_, email); }
 
-void mail::send(const std::string& from, const std::string& subject) {
+void mail::send(std::string_view from, std::string_view subject) {
   // Check if we have anyone to send to
   if (recipients_.empty() || !msg_hdl_) {
     throw dmn::runtime_error("No recipients were added to mail");
@@ -76,11 +76,8 @@ void mail::send(const std::string& from, const std::string& subject) {
   // Add mandatory headers
   add_header_item(MAIL_FORM_ITEM_NUM, MAIL_MEMO_FORM, strlen(MAIL_MEMO_FORM));
 
-  const lmbcs::str conv_from = lmbcs::translate(from);
-  add_header_item(MAIL_FROM_ITEM_NUM, conv_from.c_str(), from.size());
-
-  const lmbcs::str subject_from = lmbcs::translate(subject);
-  add_header_item(MAIL_SUBJECT_ITEM_NUM, subject_from.c_str(), subject.size());
+  add_header_item(MAIL_FROM_ITEM_NUM, from.data(), from.size());
+  add_header_item(MAIL_SUBJECT_ITEM_NUM, subject.data(), subject.size());
 
   TIMEDATE now = {};
   OSCurrentTIMEDATE(&now);
@@ -96,7 +93,7 @@ void mail::add_header_item(uint16_t index, const void* val, size_t size) {
   result.throw_if_error("Failed to add header item to mail");
 }
 
-void mail::add_to_list(dmn::list& list, const std::string& email) {
+void mail::add_to_list(dmn::list& list, std::string_view email) {
   list.push_back(email);
   recipients_.push_back(email);
 }

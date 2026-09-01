@@ -51,11 +51,11 @@ auto mime_error::make(const char* message, int code) -> dmn::mime_error {
 native_error::native_error(const char* message, status code)
     : code_(code), error(std::format("{}: {}", message, get_error_message(message, code))) {}
 
-auto native_error::os_load_string(status code) -> std::optional<lmbcs::str> {
-  lmbcs::str buffer(MAX_MESSAGE_SIZE, '\0');
-  const uint16_t out_size = OSLoadString(
-    WHANDLE{}, ERR(code.value), reinterpret_cast<char*>(buffer.data()), buffer.size() - 1
-  );
+auto native_error::os_load_string(status code) -> std::optional<dmn::lmbcs> {
+  dmn::lmbcs buffer;
+  buffer.resize(MAX_MESSAGE_SIZE);
+
+  const auto out_size = OSLoadString({}, ERR(code.value), buffer.data(), buffer.size() - 1);
   if (out_size == 0) {
     return std::nullopt;
   }
@@ -71,6 +71,6 @@ auto native_error::get_error_message(std::string message, status code) -> std::s
     return std::format("{}: {}", std::move(message), hex_code);
   }
 
-  const auto out = lmbcs::translate(*inp);
+  const auto out = inp->to_string();
   return std::format("{}: {}", std::move(message), out + " (" + hex_code + ")");
 }

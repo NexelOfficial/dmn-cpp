@@ -16,10 +16,10 @@ class mail {
   ///
   /// Opens or creates a mail message file and creates a new message within it.
   ///
-  /// \param mail_name Path or name of the mail message file.
+  /// \param mailbox Mailbox to create the message in. Defaults to "mail.box".
   /// \return Instance of `dmn::main`.
   /// \throws dmn::native_error If the message file cannot be opened or created.
-  static auto create(const std::optional<std::string>& name) -> mail;
+  static auto create(std::optional<std::string_view> mailbox = std::nullopt) -> mail;
 
   /// Set the message body.
   ///
@@ -30,22 +30,22 @@ class mail {
   /// \param content_type MIME content type to use.
   /// \throws dmn::native_error If the MIME content cannot be created or written.
   /// \throws dmn::invalid_handle If the underlying handle is empty.
-  void set_body(const std::string& body, const std::optional<std::string>& content_type) const;
+  void set_body(std::string body, std::string content_type = "text/html") const;
 
   /// Add a primary recipient.
   ///
   /// \param email Recipient email address.
-  void add_send_to(const std::string& email);
+  void add_send_to(std::string_view email);
 
   /// Add a carbon-copy recipient.
   ///
   /// \param email Recipient email address.
-  void add_copy_to(const std::string& email);
+  void add_copy_to(std::string_view email);
 
   /// Add a blind carbon-copy recipient.
   ///
   /// \param email Recipient email address.
-  void add_blind_copy_to(const std::string& email);
+  void add_blind_copy_to(std::string_view email);
 
   /// Send the message.
   ///
@@ -56,7 +56,7 @@ class mail {
   /// \param subject Message subject.
   /// \throws dmn::native_error If the sending process failed.
   /// \throws dmn::runtime_error If no recipients were added to the mail.
-  void send(const std::string& from, const std::string& subject);
+  void send(std::string_view from, std::string_view subject);
 
   [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return msg_hdl_.get(); }
 
@@ -73,7 +73,7 @@ class mail {
   void add_header_item(uint16_t index, const void* val, size_t size);
 
   /// Internal implementation used by add-functions.
-  void add_to_list(dmn::list& list, const std::string& email);
+  void add_to_list(dmn::list& list, std::string_view email);
 
   mail();
 };

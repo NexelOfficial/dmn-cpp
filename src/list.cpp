@@ -7,8 +7,8 @@
 
 #include <limits>
 
-#include "dmn/detail/lmbcs.hpp"
 #include "dmn/detail/locker.hpp"
+#include "dmn/lmbcs.hpp"
 #include "dmn/error.hpp"
 
 using dmn::list;
@@ -62,12 +62,12 @@ auto list::at(size_t index) const -> std::string {
   const dmn::status result = ListGetText(list.get_pointer(), TRUE, index, &text, &text_size);
   result.throw_if_error("Failed to get list entry");
 
-  const auto* data = reinterpret_cast<const lmbcs::char_t*>(text);
-  return dmn::lmbcs::translate(dmn::lmbcs::view(data, text_size));
+  const auto* data = reinterpret_cast<dmn::lmbcs::char_t*>(text);
+  return dmn::lmbcs_view(data, text_size).to_string();
 }
 
-void list::push_back(const std::string& value) {
-  const dmn::lmbcs::str converted = dmn::lmbcs::translate(value);
+void list::push_back(std::string_view value) {
+  const auto converted = dmn::lmbcs::from_string(value);
   const size_t value_len = converted.size();
   if (value_len > MAX_UINT16) {
     throw dmn::out_of_range("Text list entry too large");
@@ -78,7 +78,7 @@ void list::push_back(const std::string& value) {
   }
 
   const dmn::status result =
-    ListAddEntry(hdl_.get(), TRUE, &size_, count, dmn::lmbcs::cast(converted), value_len);
+    ListAddEntry(hdl_.get(), TRUE, &size_, count, converted.c_str(), value_len);
   result.throw_if_error("Failed to add list entry");
 }
 

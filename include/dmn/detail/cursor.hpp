@@ -7,11 +7,12 @@
 
 #include "dmn/detail/ods.hpp"
 #include "dmn/error.hpp"
-#include "dmn/type.hpp"
 
 template <typename T>
-concept is_valid_string = std::is_convertible_v<T, std::basic_string<char>> ||
-                          std::is_convertible_v<T, std::basic_string<unsigned char>>;
+concept is_container_like = requires(T t) {
+  { std::size(t) } -> std::same_as<size_t>;
+  { std::data(t) };
+};
 
 namespace dmn::detail {
 class cursor {
@@ -28,18 +29,26 @@ class cursor {
     offset_ = 0;
   }
 
-  void write(std::span<const std::byte> buffer) {
-    ensure_bounds(buffer.size());
-    std::memcpy(get_pointer(), buffer.data(), buffer.size());
-  }
-
-  void read(std::span<std::byte> buffer) {
-    ensure_bounds(buffer.size());
-    std::memcpy(buffer.data(), get_pointer(), buffer.size());
+  template <typename T>
+    requires std::is_trivially_copyable_v<T>
+  void write(std::span<T> buffer) {
+    auto bytes = std::as_bytes(buffer);
+    ensure_bounds(bytes.size());
+    std::memcpy(get_pointer(), bytes.data(), bytes.size());
+    offset_ += bytes.size();
   }
 
   template <typename T>
     requires std::is_trivially_copyable_v<T>
+  void read(std::span<T> buffer) {
+    auto bytes_size = std::as_bytes(buffer).size();
+    ensure_bounds(bytes_size);
+    std::memcpy(buffer.data(), get_pointer(), bytes_size);
+    offset_ += bytes_size;
+  }
+
+  template <typename T>
+    requires std::is_trivially_copyable_v<T> && (!is_container_like<T>)
   void write(const T& value, std::optional<detail::ods::type> typ = std::nullopt) {
     auto size = typ ? detail::ods::size(*typ) : sizeof(T);
     ensure_bounds(size);
@@ -53,7 +62,7 @@ class cursor {
   }
 
   template <typename T>
-    requires std::is_trivially_copyable_v<T>
+    requires std::is_trivially_copyable_v<T> && (!is_container_like<T>)
   [[nodiscard]] auto read(std::optional<detail::ods::type> typ = std::nullopt) -> T {
     auto size = typ ? detail::ods::size(*typ) : sizeof(T);
     ensure_bounds(size);

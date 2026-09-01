@@ -77,11 +77,11 @@ class list {
 
   /// Append an entry to the list.
   ///
-  /// \param value Entry to add. The value is converted from UTF-8 to LMBCS.
+  /// \param value Entry to add.
   /// \throws dmn::native_error If the entry cannot be added.
   /// \throws dmn::out_of_range If the entry is too large for a Domino text list.
   /// \throws dmn::invalid_handle If the underlying handle is empty.
-  void push_back(const std::string& value);
+  void push_back(std::string_view value);
 
   /// Remove the last entry from the list.
   ///

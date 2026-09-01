@@ -1,6 +1,7 @@
 #include "dmn/detail/object_value.hpp"
 
-#include "dmn/detail/lmbcs.hpp"
+#include "dmn/lmbcs.hpp"
+#include "dmn/type.hpp"
 
 using dmn::detail::object_value;
 
@@ -9,10 +10,10 @@ auto object_value<std::string>::convert(detail::cursor& cs) -> std::optional<std
     return std::nullopt;
   }
 
-  // Use pointer with lmbcs::view instead of obj.read() to prevent double allocation
-  auto* ptr = cs.get_pointer<lmbcs::char_t>();
-  const lmbcs::view value(ptr, cs.size() - sizeof(dmn::type));
-  return lmbcs::translate(value);
+  // Use pointer with dmn::lmbcs_view instead of obj.read() to prevent double allocation
+  auto* ptr = cs.get_pointer<dmn::lmbcs::char_t>();
+  const dmn::lmbcs_view value(ptr, cs.size() - sizeof(dmn::type));
+  return value.to_string();
 }
 
 auto object_value<std::string>::is(detail::cursor& cs) -> bool {
@@ -44,7 +45,7 @@ auto object_value<dmn::time_date>::is(detail::cursor& cs) -> bool {
 }
 
 auto object_value<dmn::list>::convert(detail::cursor& cs) -> std::optional<dmn::list> {
-  if (cs.read<dmn::type>() == dmn::type::text_list) {
+  if (is(cs)) {
     return dmn::list({cs.get_pointer(0), cs.size()});
   }
   return std::nullopt;
@@ -55,8 +56,8 @@ auto object_value<dmn::list>::is(detail::cursor& cs) -> bool {
 }
 
 auto object_value<dmn::formula>::convert(detail::cursor& cs) -> std::optional<dmn::formula> {
-  if (cs.read<dmn::type>() == dmn::type::formula) {
-    return dmn::formula({cs.get_pointer(0), cs.size()});
+  if (is(cs)) {
+    return dmn::formula({cs.get_pointer(), cs.size() - sizeof(dmn::type)});
   }
   return std::nullopt;
 }
