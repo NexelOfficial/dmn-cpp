@@ -13,6 +13,7 @@
 using dmn::addin;
 
 std::mutex addin::mtx = {};
+std::optional<std::string> addin::prefix_ = std::nullopt;
 
 auto addin::create(std::string_view name) -> addin {
   (void)dmn::session::instance();
