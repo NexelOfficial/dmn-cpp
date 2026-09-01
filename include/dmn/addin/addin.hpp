@@ -73,7 +73,7 @@ class addin {
 
  private:
   static std::mutex mtx;
-  static inline std::optional<std::string> prefix_;
+  static std::optional<std::string> prefix_;
 
   detail::uhandle<detail::dhandle_t> status_hdl_;
 

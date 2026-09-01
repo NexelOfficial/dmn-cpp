@@ -25,20 +25,22 @@ struct key_buffer_data {
 }  // namespace
 
 void view::iterate_entries(
-  void* position_ptr, const query_options& opts, const function_t& func
+  void* position_ptr, const query_options& opts, const function_t& func, uint32_t available
 ) const {
-  using namespace dmn::detail;
-
   uint16_t signal = SIGNAL_MORE_TO_DO;
-  uint32_t remaining = opts.count;
   uint32_t current_skip = opts.offset;
+  if (current_skip >= available) {
+    return;
+  }
+
+  uint32_t remaining = std::min(opts.count, available - current_skip);
 
   if (!opts.key && opts.offset != std::numeric_limits<uint32_t>::max()) {
-    current_skip += 1;
+    ++current_skip;
   }
 
   while ((signal & SIGNAL_MORE_TO_DO) != 0 && remaining != 0) {
-    dhandle_t entries_handle{};
+    detail::dhandle_t entries_handle{};
     DWORD entries_length = 0;
     uint16_t memory_len = 0;
 
@@ -49,7 +51,7 @@ void view::iterate_entries(
     );
     result.throw_if_error("Failed to read entries");
 
-    auto entries_obj = locker(entries_handle, memory_len);
+    auto entries_obj = detail::locker(entries_handle, memory_len);
     if (entries_length == 0) {
       return;
     }
@@ -80,7 +82,7 @@ void view::iterate_entries(
 
         // Copy memory to owned object
         const std::span buffer{entries_obj.get_pointer(), len};
-        auto locker = locker::allocate<std::byte>(buffer);
+        auto locker = detail::locker::allocate<std::byte>(buffer);
         auto value = dmn::object{std::move(locker)};
         current_entry.columns.emplace_back(value);
 
@@ -131,43 +133,23 @@ auto view::open(const dmn::database& db, std::string_view view_name) -> std::opt
 }
 
 void view::iterate(const query_options& opts, const function_t& func) const {
+  DWORD num_matches = std::numeric_limits<uint32_t>::max();
   COLLECTIONPOSITION coll_pos{.Level = 0, .Tumbler = {0}};
-  if (!opts.key) {
-    iterate_entries(&coll_pos, opts, func);
+  if (!opts.key || opts.key->empty()) {
+    iterate_entries(&coll_pos, opts, func, opts.count);
     return;
   }
 
-  DWORD num_matches = std::numeric_limits<uint32_t>::max();
-
   const auto converted = dmn::lmbcs::from_string(*opts.key);
-  const auto text_len = converted.size();
-  const auto total = sizeof(key_buffer_data) + text_len;
-  std::vector<char> buf(total);
-
-  const std::span<char> ptr(buf.data(), buf.size());
-
-  // Write header
-  const auto key_buffer_span = ptr.subspan(0, sizeof(key_buffer_data));
-  auto* key_buffer = reinterpret_cast<key_buffer_data*>(key_buffer_span.data());
-  key_buffer->table.Length = total;
-  key_buffer->table.Items = 1;
-  key_buffer->item.NameLength = 0;
-  key_buffer->item.ValueLength = text_len + sizeof(uint16_t);
-  key_buffer->type = TYPE_TEXT;
-
-  // Write data
-  const auto data_span = ptr.subspan(sizeof(key_buffer_data), text_len);
-  memcpy(data_span.data(), converted.c_str(), text_len);
-
-  // Start at the beginning of the key
-  const dmn::status result =
-    NIFFindByKey(get_handle(), buf.data(), FIND_UPDATE_IF_NOT_FOUND, &coll_pos, &num_matches);
+  const dmn::status result = NIFFindByName(
+    get_handle(), converted.c_str(), FIND_UPDATE_IF_NOT_FOUND, &coll_pos, &num_matches
+  );
   if (result.is_not_found()) {
     return;
   }
   result.throw_if_error("Failed to find entries by key");
 
-  iterate_entries(&coll_pos, opts, func);
+  iterate_entries(&coll_pos, opts, func, num_matches);
 }
 
 auto view::get_entries(const query_options& opts) const -> std::vector<entry> {

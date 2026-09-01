@@ -212,9 +212,9 @@ auto view::build_collation() const -> dmn::object {
   for (const auto& entry : sorted_cols) {
     const auto [sort, categorized] = entry->get_sorting();
     const uint8_t key_type = categorized ? COLLATE_TYPE_CATEGORY : COLLATE_TYPE_KEY;
-    const uint8_t flags = sort == design::column::sorting::descending ? CDF_M_descending : 0;
+    const uint8_t sort_flag = sort == design::column::sorting::descending ? CDF_M_descending : 0;
     const COLLATE_DESCRIPTOR descriptor{
-      .Flags = flags,
+      .Flags = static_cast<uint8_t>(sort_flag | CDF_M_permuted),
       .signature = COLLATE_DESCRIPTOR_SIGNATURE,
       .keytype = key_type,
       .NameOffset = name_offset,
