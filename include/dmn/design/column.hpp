@@ -32,18 +32,18 @@ class view_column_format {
   view_column_format();
 
  private:
-  uint16_t signature_;
+  uint16_t signature_= 0;
   uint16_t flags1_ = 0;
   uint16_t item_name_size_ = 0;
   uint16_t title_size_ = 0;
   uint16_t formula_size_ = 0;
   uint16_t constant_value_size_ = 0;
-  uint16_t display_width_;
+  uint16_t display_width_ = 0;
   font::id font_id_;
   uint16_t flags2_ = 0;
   number_format number_format_{};
   time_format time_format_{};
-  uint16_t format_data_type_;
+  uint16_t format_data_type_ = 0;
   uint16_t list_separator_ = 0;
 
   friend class column;
@@ -55,7 +55,7 @@ class view_column_format2 {
   view_column_format2();
 
  private:
-  uint16_t signature_;
+  uint16_t signature_ = 0;
   font::id header_font_id_;
   dmn::unid resort_to_view_unid_{};
   uint16_t second_resort_column_index_ = 0;
