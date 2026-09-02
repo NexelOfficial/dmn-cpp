@@ -13,7 +13,23 @@
 using dmn::addin;
 
 std::mutex addin::mtx = {};
-std::optional<std::string> addin::prefix_ = std::nullopt;
+std::optional<dmn::lmbcs> addin::prefix_ = std::nullopt;
+
+namespace {
+auto to_escaped_lmbcs(std::string_view text) -> dmn::lmbcs {
+  std::string escaped;
+  escaped.reserve(text.size());
+  for (const auto& chr : text) {
+    if (chr == '%') {
+      escaped += "%%";
+    } else {
+      escaped += chr;
+    }
+  }
+
+  return dmn::lmbcs::from_string(escaped);
+}
+}  // namespace
 
 auto addin::create(std::string_view name) -> addin {
   (void)dmn::session::instance();
@@ -75,22 +91,14 @@ void addin::enter_loop(const function_t& callback) const {
   dmn::addin::log("Add-in loop stopped.");
 }
 
-void addin::set_log_prefix(std::string_view prefix) { prefix_.emplace(prefix); }
+void addin::set_log_prefix(std::string_view prefix) {
+  auto converted = to_escaped_lmbcs(prefix);
+  prefix_.emplace(std::move(converted));
+}
 
 void addin::log_impl(std::string_view text) {
-  // Escape percent signs
-  std::string escaped;
-  escaped.reserve(text.size());
-  for (const auto& chr : text) {
-    if (chr == '%') {
-      escaped += "%%";
-    } else {
-      escaped += chr;
-    }
-  }
-
-  auto converted = dmn::lmbcs::from_string(escaped);
-  AddInLogMessageText(converted.data(), dmn::no_error.value);
+  auto message = prefix_.value_or(dmn::lmbcs{}) + to_escaped_lmbcs(text);
+  AddInLogMessageText(reinterpret_cast<char*>(message.data()), NOERROR);
 }
 
 addin::addin(detail::dhandle_t handle) : status_hdl_(handle, AddInDeleteStatusLine) {};

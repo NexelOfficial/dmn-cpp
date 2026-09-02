@@ -2,10 +2,11 @@
 
 #include <mutex>
 #include <sstream>
+#include <optional>
 #include <functional>
-#include <string>
 
 #include "dmn/detail/uhandle.hpp"
+#include "dmn/lmbcs.hpp"
 
 namespace dmn {
 class addin {
@@ -57,7 +58,6 @@ class addin {
   static void log(Args&&... args) noexcept {
     try {
       std::stringstream ss{};
-      ss << prefix_.value_or("");
       // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
       ((ss << std::forward<Args>(args)), ...);
       log_impl(ss.str());
@@ -73,7 +73,7 @@ class addin {
 
  private:
   static std::mutex mtx;
-  static std::optional<std::string> prefix_;
+  static std::optional<dmn::lmbcs> prefix_;
 
   detail::uhandle<detail::dhandle_t> status_hdl_;
 

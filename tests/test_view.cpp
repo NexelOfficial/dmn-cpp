@@ -54,7 +54,7 @@ TEST_CASE("a view can be created through the design API", "[nsf][design]") {
   design_view.save();
 
   const std::array<std::pair<std::string, double>, 4> values{{
-    {"Alpha", 10.5},
+    {"Alpha", 10},
     {"Alpha", 20},
     {"Beta " + utils::random_small_string(), 30.25},
     {"Gamma " + utils::random_small_string(), 60},
