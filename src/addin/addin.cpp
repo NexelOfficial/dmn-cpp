@@ -97,7 +97,7 @@ void addin::set_log_prefix(std::string_view prefix) {
 }
 
 void addin::log_impl(std::string_view text) {
-  auto message = prefix_.value_or({}) + to_escaped_lmbcs(text);
+  auto message = prefix_.value_or(dmn::lmbcs{}) + to_escaped_lmbcs(text);
   AddInLogMessageText(reinterpret_cast<char*>(message.data()), NOERROR);
 }
 
