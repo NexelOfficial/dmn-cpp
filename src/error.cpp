@@ -21,7 +21,7 @@ constexpr uint16_t MAX_MESSAGE_SIZE = 512;
 
 auto status::is_not_found() const noexcept -> bool {
   return value == ERR_NOT_FOUND || value == ERR_NOEXIST || value == ERR_INVALID_NOTE ||
-         value == ERR_NOTE_DELETED || value == ERR_ITEM_NOT_FOUND;
+         value == ERR_NOTE_DELETED || value == ERR_ITEM_NOT_FOUND || value == ERR_ACL_NOENTRY;
 }
 
 auto status::is_locked() const noexcept -> bool {

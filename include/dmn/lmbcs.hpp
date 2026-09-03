@@ -47,6 +47,9 @@ class lmbcs_view : public std::basic_string_view<unsigned char> {
 
   lmbcs_view(const char_t* ptr, size_t size) : base_type(ptr, size) {};
 
+  lmbcs_view(const char* ptr, size_t size)
+      : base_type(reinterpret_cast<const char_t*>(ptr), size) {};
+
   lmbcs_view(const lmbcs& str) : base_type(str) {};
 
   /// Translate the current LMBCS to a UTF-8 std::string.
