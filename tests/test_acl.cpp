@@ -47,7 +47,7 @@ TEST_CASE("ACL manager persists entries, roles, and policy explicitly", "[acl][n
   REQUIRE(persisted != stored_entries.end());
   REQUIRE(persisted->get_access() == entry_access);
   REQUIRE(persisted->get_type() == acl::principal_type::person);
-  REQUIRE(persisted->remove());
+  REQUIRE_NOTHROW(persisted->remove());
 
   auto names = acl::names::from_username(persisted->get_name());
   auto lookup = db->get_access(names);
