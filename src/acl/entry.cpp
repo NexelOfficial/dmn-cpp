@@ -1,6 +1,7 @@
 #include "dmn/acl/entry.hpp"
 
 #include <utility>
+#include "dmn/error.hpp"
 
 #include <domino/global.h>
 #include <domino/acl.h>
@@ -21,12 +22,6 @@ auto entry::get_name() const noexcept -> std::string_view { return name_; }
 auto entry::get_access() const noexcept -> const dmn::acl::access& { return access_; }
 
 auto entry::get_level() const noexcept -> dmn::acl::level { return access_.level; }
-
-auto entry::get_flags() const noexcept -> uint16_t { return access_.flags; }
-
-auto entry::get_roles() const noexcept -> const std::vector<dmn::acl::role>& {
-  return access_.roles;
-}
 
 auto entry::get_type() const noexcept -> dmn::acl::principal_type { return type_; }
 
@@ -54,18 +49,6 @@ auto entry::set_level(dmn::acl::level value) -> entry& {
   return set_access(std::move(updated));
 }
 
-auto entry::set_flags(uint16_t value) -> entry& {
-  auto updated = access_;
-  updated.flags = value;
-  return set_access(std::move(updated));
-}
-
-auto entry::set_roles(std::vector<dmn::acl::role> value) -> entry& {
-  auto updated = access_;
-  updated.roles = std::move(value);
-  return set_access(std::move(updated));
-}
-
 auto entry::set_type(dmn::acl::principal_type value) -> entry& {
   auto updated = *this;
   updated.type_ = value;
@@ -82,7 +65,8 @@ auto entry::set_administration_server(bool value) -> entry& {
   return *this;
 }
 
-auto entry::remove() -> bool {
+void entry::remove() {
   const auto converted = dmn::lmbcs::from_string(name_);
-  return ACLDeleteEntry(mgr_.get_handle(), converted.c_str()) == NOERROR;
+  const dmn::status result = ACLDeleteEntry(mgr_.get_handle(), converted.c_str());
+  result.throw_if_error("Failed to remove ACL entry");
 }
