@@ -5,10 +5,15 @@
 #include <optional>
 #include <vector>
 
+#include "dmn/acl/names.hpp"
 #include "dmn/detail/uhandle.hpp"
 #include "dmn/dql.hpp"
-#include "dmn/acl/names.hpp"
 #include "dmn/unid.hpp"
+
+namespace dmn::acl {
+class manager;
+class access;
+}  // namespace dmn::acl
 
 namespace dmn {
 class view;
@@ -53,14 +58,18 @@ class database {
   /// \throws dmn::native_error If the database cannot be opened.
   static auto open(std::string_view file, const dmn::acl::names& names) -> std::optional<database>;
 
-  /// Get the effective access level for the specified names list.
+  /// Read this databases ACL.
   ///
-  /// \param names Names list to evaluate.
-  /// \return Effective ACL access level.
-  /// \throws dmn::native_error If the access level cannot be determined.
-  /// \throws dmn::invalid_argument If the names list is empty.
-  /// \throws dmn::invalid_handle If the underlying database handle is empty.
-  [[nodiscard]] auto get_access_level(dmn::acl::names& names) const -> uint16_t;
+  /// Changes are saved only when `dmn::acl::manager::save()` is called.
+  [[nodiscard]] auto get_acl() const -> dmn::acl::manager;
+
+  /// Create a new ACL for this database.
+  ///
+  /// Changes are saved only when `dmn::acl::manager::save()` is called.
+  [[nodiscard]] auto create_acl() const -> dmn::acl::manager;
+
+  /// Get the full effective ACL result for the specified names list.
+  [[nodiscard]] auto get_access(const dmn::acl::names& names) const -> dmn::acl::access;
 
   /// Run a DQL query for the database.
   ///

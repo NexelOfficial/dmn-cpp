@@ -13,6 +13,7 @@
 #include "dmn/addin/session.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/acl/manager.hpp"
+#include "dmn/acl/access.hpp"
 #include "dmn/acl/names.hpp"
 #include "dmn/lmbcs.hpp"
 #include "dmn/error.hpp"
@@ -74,13 +75,16 @@ auto database::open(std::string_view file, const dmn::acl::names& names)
   return database(handle);
 }
 
-auto database::get_access_level(dmn::acl::names& names) const -> uint16_t {
+auto database::get_acl() const -> dmn::acl::manager { return dmn::acl::manager::read(*this); }
+
+auto database::create_acl() const -> dmn::acl::manager { return dmn::acl::manager::create(*this); }
+
+auto database::get_access(const dmn::acl::names& names) const -> dmn::acl::access {
   if (names.get_count() == 0) {
     throw dmn::invalid_argument("Names list is empty");
   }
 
-  const auto acl = dmn::acl::manager::read(*this);
-  return acl.lookup_access(names);
+  return get_acl().lookup_access(names);
 }
 
 auto database::run_query(const dmn::dql::expression& query, size_t limit) const
