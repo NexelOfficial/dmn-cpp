@@ -33,6 +33,7 @@ class role {
 /// Container type that manages ACL roles under the hood
 ///
 /// \throws dmn::invalid_handle If the underlying handle is empty.
+/// \throws dmn::native_error In case of a lower level failure.
 class role_map {
  public:
   using value_type = std::pair<size_t, acl::role>;
@@ -100,7 +101,7 @@ class role_map {
   [[nodiscard]] auto at(size_t key) const -> acl::role;
 
   /// Try to get a role by slot.
-  [[nodiscard]] auto try_at(size_t key) const noexcept -> std::optional<acl::role>;
+  [[nodiscard]] auto try_at(size_t key) const -> std::optional<acl::role>;
 
   /// Insert a role at the first available position.
   void insert(const role& value);

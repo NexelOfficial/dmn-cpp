@@ -35,7 +35,7 @@ TEST_CASE("ACL manager persists entries, roles, and policy explicitly", "[acl][n
   REQUIRE(roles.at(0) == acl::role{"Approver"});
   REQUIRE(roles.size() == 1);
   REQUIRE(!control.admin_server().empty());
-  control.save();
+  REQUIRE_NOTHROW(control.save());
 
   auto stored = db->get_acl();
   REQUIRE(stored.roles().at(0) == acl::role{"Approver"});
@@ -44,14 +44,13 @@ TEST_CASE("ACL manager persists entries, roles, and policy explicitly", "[acl][n
   auto persisted = std::ranges::find_if(stored_entries, [](const auto& entry) {
     return entry.get_name() == "CN=Renamed ACL Test User/O=dmn";
   });
+  REQUIRE(persisted != stored_entries.end());
+  REQUIRE(persisted->get_access() == entry_access);
+  REQUIRE(persisted->get_type() == acl::principal_type::person);
+  REQUIRE(persisted->remove());
 
   auto names = acl::names::from_username(persisted->get_name());
   auto lookup = db->get_access(names);
-
-  REQUIRE(persisted != stored_entries.end());
-  REQUIRE(persisted->get_access() == entry_access);
   REQUIRE(persisted->get_access() == lookup);
-  REQUIRE(persisted->get_type() == acl::principal_type::person);
-  REQUIRE(persisted->remove());
-  stored.save();
+  REQUIRE_NOTHROW(stored.save());
 }

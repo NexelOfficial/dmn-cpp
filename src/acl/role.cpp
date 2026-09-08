@@ -40,10 +40,10 @@ auto role_map::at(size_t key) const -> role {
   return role{resized.to_string()};
 }
 
-auto role_map::try_at(size_t key) const noexcept -> std::optional<role> {
+auto role_map::try_at(size_t key) const -> std::optional<role> {
   try {
     return at(key);
-  } catch (...) {
+  } catch (const dmn::out_of_range&) {
     return std::nullopt;
   }
 }
