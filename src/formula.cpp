@@ -44,10 +44,10 @@ auto formula::decompile(bool is_selection_formula) const -> std::string {
   return raw.to_string();
 }
 
-auto formula::size() const -> size_t {
+auto formula::size(bool even) const -> size_t {
   uint16_t size = 0;
   NSFFormulaGetSize(get_handle(), &size);
-  return size;
+  return size + (even ? size % 2 : 0);
 }
 
 void formula::merge(const formula& other) const {

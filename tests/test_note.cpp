@@ -69,7 +69,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   primary.set("NumericValue", 42.5);
   primary.set("ZeroValue", 0.0);
   primary.set("OneValue", 1.0);
-  primary.set("DateValue", now.value());
+  primary.set("DateValue", now);
 
   dmn::list tags{};
   tags.push_back("alpha");
@@ -110,7 +110,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
 
   REQUIRE_FALSE(numeric_text_value.has_value());
   REQUIRE(numeric_value.has_value());
-  REQUIRE(date_value.value() == now.value());
+  REQUIRE(date_value.value() == now);
   REQUIRE(numeric_value.value() == 42.5);
   REQUIRE(numeric_int_value.has_value());
   REQUIRE(numeric_int_value.value() == 42);

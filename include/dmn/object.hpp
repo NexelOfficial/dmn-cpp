@@ -41,16 +41,6 @@ class object {
   /// Extract the type of the object.
   [[nodiscard]] auto get_type() const -> dmn::type;
 
-  /// Write data to the memory behind the object.
-  ///
-  /// \param typ Underlying Domino data type.
-  /// \param data Data buffer to write.
-  /// \throws dmn::runtime_error If the object is not an item value.
-  /// \throws dmn::native_error If the reallocation failed.
-  /// \note Writing data is not possible when the object does not belong to an item value.
-  /// \note All copies of the object will point to the new memory.
-  void write(dmn::type typ, std::span<const std::byte> data);
-
   /// Check whether the object can be converted to a type.
   template <typename T>
     requires detail::has_object_typecheck<T>
@@ -130,6 +120,6 @@ class object {
 
   [[nodiscard]] auto data_pair() const -> std::pair<dmn::type, detail::locker>;
 
-  friend class note;
+  friend class dmn::note;
 };
 }  // namespace dmn

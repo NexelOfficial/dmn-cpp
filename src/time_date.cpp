@@ -10,8 +10,7 @@ using dmn::time_date;
 static_assert(sizeof(TIMEDATE) == sizeof(dmn::time_date));
 static_assert(alignof(TIMEDATE) == alignof(dmn::time_date));
 
-auto time_date::from_time_point(std::chrono::system_clock::time_point tp)
-  -> std::optional<time_date> {
+auto time_date::from_time_point(std::chrono::system_clock::time_point tp) -> time_date {
   using namespace std::chrono;
   const auto hundredths = floor<duration<long long, std::centi>>(tp);
   const auto day_point = floor<days>(hundredths);
@@ -33,7 +32,7 @@ auto time_date::from_time_point(std::chrono::system_clock::time_point tp)
   output.hundredth = static_cast<int>(time.subseconds().count());
 
   if (TimeLocalToGM(&output) != NOERROR) {
-    return std::nullopt;
+    throw dmn::conversion_error("Failed to create TIMEDATE from time point");
   }
   return *reinterpret_cast<dmn::time_date*>(&output.GM);
 }
