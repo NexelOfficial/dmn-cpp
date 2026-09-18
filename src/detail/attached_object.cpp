@@ -21,8 +21,9 @@ attached_object::attached_object(dmn::database db, type object_type, size_t size
       object_type_(object_type),
       hdl_([this](handle_t hdl) { NSFDbFreeObject(db_.get_handle(), hdl); }) {
   handle_t handle = {};
-  const dmn::status result =
-    NSFDbAllocObject(db_.get_handle(), size, NOTE_CLASS_DOCUMENT, 0, &handle);
+  const dmn::status result = NSFDbAllocObject(
+    db_.get_handle(), size, NOTE_CLASS_DOCUMENT, 0, reinterpret_cast<DWORD*>(&handle)
+  );
   result.throw_if_error("Failed to allocate attached object memory");
 
   hdl_.put(handle);

@@ -16,7 +16,7 @@ class attached_object {
     unknown = 0xFFFF
   };
 
-  using handle_t = unsigned long;
+  using handle_t = uint32_t;
   attached_object() = delete;
 
   /// Allocate a new attached object in the provided database.
