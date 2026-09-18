@@ -5,11 +5,22 @@
 #include <domino/queryods.h>
 #include <domino/ods.h>
 
-using dmn::design::flags;
 using dmn::design::flag;
+using dmn::design::flags;
 using dmn::design::language;
+using dmn::design::trigger;
 
-static_assert(static_cast<uint16_t>(language::formula) == SIG_ACTION_FORMULAONLY);
+static_assert(static_cast<uint16_t>(trigger::none) == ASSISTTRIGGER_TYPE_NONE);
+static_assert(static_cast<uint16_t>(trigger::scheduled) == ASSISTTRIGGER_TYPE_SCHEDULED);
+static_assert(static_cast<uint16_t>(trigger::newmail) == ASSISTTRIGGER_TYPE_NEWMAIL);
+static_assert(static_cast<uint16_t>(trigger::pasted) == ASSISTTRIGGER_TYPE_PASTED);
+static_assert(static_cast<uint16_t>(trigger::manual) == ASSISTTRIGGER_TYPE_MANUAL);
+static_assert(static_cast<uint16_t>(trigger::docupdate) == ASSISTTRIGGER_TYPE_DOCUPDATE);
+static_assert(static_cast<uint16_t>(trigger::synchnewmail) == ASSISTTRIGGER_TYPE_SYNCHNEWMAIL);
+static_assert(static_cast<uint16_t>(trigger::event) == ASSISTTRIGGER_TYPE_EVENT);
+static_assert(static_cast<uint16_t>(trigger::serverstart) == ASSISTTRIGGER_TYPE_SERVERSTART);
+
+static_assert(static_cast<uint16_t>(language::formula) == SIG_ACTION_FORMULA);
 static_assert(static_cast<uint16_t>(language::lotusscript) == SIG_ACTION_LOTUSSCRIPT);
 static_assert(static_cast<uint16_t>(language::java) == SIG_ACTION_JAVAAGENT);
 

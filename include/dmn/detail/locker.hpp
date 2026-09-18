@@ -78,6 +78,8 @@ class locker : public detail::cursor {
     return allocate_impl(size, own);
   }
 
+  [[nodiscard]] auto get_ownership() -> ownership { return own_; }
+
   [[nodiscard]] auto release() -> detail::block_id { return hdl_.release(); }
 
   [[nodiscard]] auto get_block_id() const -> detail::block_id { return hdl_.get(); }
@@ -86,6 +88,7 @@ class locker : public detail::cursor {
 
  private:
   detail::uhandle<detail::block_id> hdl_;
+  ownership own_;
   size_t size_;
 
   /// Internal implementation used by `detail::locker::allocate`.

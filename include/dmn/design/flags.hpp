@@ -7,7 +7,20 @@
 namespace dmn::design {
 constexpr static uint8_t MAX_DESIGN_FLAGS = 64;
 
-enum class language : uint16_t { formula = 65426, lotusscript = 65413, java = 65427 };
+// NOLINTNEXTLINE(performance-enum-size)
+enum class trigger : uint16_t {
+  none,
+  scheduled,
+  newmail,
+  pasted,
+  manual,
+  docupdate,
+  synchnewmail,
+  event,
+  serverstart
+};
+
+enum class language : uint16_t { formula = 65412, lotusscript = 65413, java = 65427 };
 
 enum class flag : char {
   invalid = '\0',

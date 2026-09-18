@@ -27,6 +27,10 @@ class object {
   ///
   /// \param locker Instance of `detail::locker` holding the raw memory.
   object(detail::locker locker) {
+    if (locker.get_ownership() != detail::ownership::take) {
+      throw dmn::invalid_argument("Locker must own memory in order to create an object");
+    }
+
     auto st = state(locker.get_block_id(), locker.size());
     state_ = std::make_shared<state>(st);
     owner_ = std::make_shared<detail::locker>(std::move(locker));

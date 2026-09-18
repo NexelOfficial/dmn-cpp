@@ -2,7 +2,6 @@
 
 #include <array>
 #include <cstdint>
-#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -45,7 +44,6 @@ struct view_table_format2 {
 
 class view {
  public:
-  static auto open(const dmn::database& db, std::string_view title) -> std::optional<view>;
   static auto create(const dmn::database& db, std::string_view title) -> view;
 
   auto column(std::string_view title) -> design::column&;

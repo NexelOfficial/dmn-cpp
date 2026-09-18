@@ -6,17 +6,12 @@
 #include <domino/agents.h>
 #include <domino/nif.h>
 #include <chrono>
-#include <array>
 
 #include "dmn/design/flags.hpp"
+#include "dmn/detail/attached_object.hpp"
 #include "dmn/detail/ods.hpp"
+#include "dmn/error.hpp"
 #include "dmn/time_date.hpp"
-
-namespace {
-struct ls_object {
-  std::array<std::byte, 2> pad;
-};
-}  // namespace
 
 template <>
 struct dmn::detail::note_value<ODS_ASSISTSTRUCT> {
@@ -60,29 +55,37 @@ auto agent::create(const dmn::database& db, std::string_view title) -> agent {
   }
 
   auto note = db.create_note();
-  note.set(FIELD_TITLE, title, dmn::item_flag::sign);
-  note.set(FILTER_COMMENT_ITEM, std::string{}, dmn::item_flag::sign);
-
   uint16_t note_class = NOTE_CLASS_FILTER;
   NSFNoteSetInfo(note.get_handle(), _NOTE_CLASS, &note_class);
 
   auto assist_flags = std::string{ASSIST_FLAG_ENABLED} + std::string{ASSIST_FLAG_AGENT_RUNASSIGNER};
   note.set(ASSIST_FLAGS_ITEM, assist_flags, dmn::item_flag::sign);
 
-  const ODS_ASSISTSTRUCT assist{
-    .wTriggerType = ASSISTTRIGGER_TYPE_MANUAL, .wSearchType = ASSISTSEARCH_TYPE_SELECTED
-  };
-  note.set(ASSIST_INFO_ITEM, assist, dmn::item_flag::sign);
-
   note.set(ASSIST_LASTRUN_ITEM, dmn::time_date{}, dmn::item_flag::sign);
   note.set(ASSIST_DOCCOUNT_ITEM, 0, dmn::item_flag::sign);
-  note.set(ASSIST_TRIGGER_ITEM, std::to_string(ASSISTTRIGGER_TYPE_MANUAL));
   note.set("$Generator", "dmn-cpp");
 
-  return {std::move(note)};
+  agent ag(std::move(note));
+  ag.set_title(title);
+  ag.set_comment("");
+  ag.set_trigger(trigger::none);
+  ag.set_action_ex();
+  ag.set_assist_query();
+  ag.set_run_info();
+  return ag;
 }
 
-void agent::set_code(dmn::formula code) {
+auto agent::set_title(std::string_view title) -> agent& {
+  note_.set(FIELD_TITLE, title, dmn::item_flag::sign);
+  return *this;
+}
+
+auto agent::set_comment(std::string_view comment) -> agent& {
+  note_.set(DESIGN_COMMENT, comment, dmn::item_flag::sign);
+  return *this;
+}
+
+auto agent::set_code(dmn::formula code) -> agent& {
   auto formula_size = static_cast<uint16_t>(code.size(true));
   auto size = ods::size(ods::type::cdactionheader) + ods::size(ods::type::cdactionformula) +
               formula_size + sizeof(dmn::type);
@@ -99,7 +102,7 @@ void agent::set_code(dmn::formula code) {
   {
     const auto length = ods::size(ods::type::cdactionformula) + formula_size;
     const WSIG header{.Signature = SIG_ACTION_FORMULA, .Length = static_cast<uint16_t>(length)};
-    const CDACTIONFORMULA action{.Header = header, .wFormulaLen = formula_size};
+    const CDACTIONFORMULA action{.Header = header, .dwFlags = 0, .wFormulaLen = formula_size};
     lock.write(action, ods::type::cdactionformula);
   }
 
@@ -111,19 +114,31 @@ void agent::set_code(dmn::formula code) {
 
   const dmn::object obj{std::move(lock)};
   note_.set(ASSIST_ACTION_ITEM, obj, dmn::item_flag::sign);
-  note_.set(
-    ASSIST_TYPE_ITEM, static_cast<uint16_t>(design::language::formula), dmn::item_flag::sign
-  );
+  note_.set(ASSIST_TYPE_ITEM, std::to_underlying(design::language::formula), dmn::item_flag::sign);
   note_.set(DESIGN_FLAGS, flags::from_language(design::language::formula));
+  return *this;
+}
+
+auto agent::set_trigger(trigger trig) -> agent& {
+  auto raw_trig = std::to_underlying(trig);
+  note_.set(ASSIST_TRIGGER_ITEM, std::to_string(raw_trig));
+
+  const ODS_ASSISTSTRUCT assist{.wTriggerType = raw_trig, .wSearchType = 0};
+  note_.set(ASSIST_INFO_ITEM, assist, dmn::item_flag::sign);
+  return *this;
+}
+
+auto agent::get_title() const -> std::string {
+  return note_.get<std::string>(FIELD_TITLE).value_or("");
+}
+
+auto agent::get_comment() const -> std::string {
+  return note_.get<std::string>(DESIGN_COMMENT).value_or("");
 }
 
 void agent::save() {
   auto now = dmn::time_date::from_time_point(std::chrono::system_clock::now());
   note_.set(ASSIST_VERSION_ITEM, now);
-
-  set_action_ex();
-  set_assist_query();
-  set_run_info();
 
   note_.sign();
   note_.save(false);
@@ -138,49 +153,22 @@ void agent::set_action_ex() {
 }
 
 void agent::set_run_info() {
-  // TODO: Fix object leak (NSFDbFreeObject) with DbObject wrapper
-  DWORD object_id = 0;
   const auto db = note_.get_database();
-  const auto object_size = ods::size(ods::type::ods_assistrunobjectheader) +
-                           ods::size(ods::type::ods_assistrunobjectentry);
+  const auto size = ods::size(ods::type::ods_assistrunobjectheader) +
+                    ods::size(ods::type::ods_assistrunobjectentry);
 
-  {
-    const dmn::status result =
-      NSFDbAllocObject(db.get_handle(), object_size, NOTE_CLASS_DOCUMENT, 0, &object_id);
-    result.throw_if_error("Failed to allocate object for agent");
-  }
+  detail::attached_object object(db, detail::attached_object::type::assist_run_data, size);
+  object.append_to_note(note_, ASSIST_RUNINFO_ITEM);
 
-  {
-    const auto item_size = sizeof(dmn::type) + ods::size(ods::type::object_descriptor);
+  const ODS_ASSISTRUNOBJECTHEADER run_header{.wEntries = 1};
+  const ODS_ASSISTRUNOBJECTENTRY run_entry{};
 
-    auto lock = detail::locker::allocate(item_size);
-    lock.write(dmn::type::object);
+  auto lock = detail::locker::allocate(size);
+  lock.write(run_header, ods::type::ods_assistrunobjectheader);
+  lock.write(run_entry, ods::type::ods_assistrunobjectentry);
 
-    const OBJECT_DESCRIPTOR desc{.ObjectType = OBJECT_ASSIST_RUNDATA, .RRV = object_id};
-    lock.write(desc, ods::type::object_descriptor);
-
-    const BLOCKID bid{.pool = lock.get_handle(), .block = 0};
-    const dmn::status result = NSFItemAppendObject(
-      note_.get_handle(), ITEM_SUMMARY, ASSIST_RUNINFO_ITEM, std::strlen(ASSIST_RUNINFO_ITEM), bid,
-      lock.size(), TRUE
-    );
-    result.throw_if_error("Failed to append info object to agent note");
-    (void)lock.release();
-  }
-
-  {
-    auto lock = detail::locker::allocate(object_size);
-
-    const ODS_ASSISTRUNOBJECTHEADER run_header{.wEntries = 1};
-    lock.write(run_header, ods::type::ods_assistrunobjectheader);
-
-    const ODS_ASSISTRUNOBJECTENTRY run_entry{};
-    lock.write(run_entry, ods::type::ods_assistrunobjectentry);
-
-    const dmn::status result =
-      NSFDbWriteObject(db.get_handle(), object_id, lock.get_handle(), 0, lock.size());
-    result.throw_if_error("Failed to write object data to agent info object");
-  }
+  object.write(std::move(lock));
+  (void)object.release();
 }
 
 void agent::set_assist_query() {

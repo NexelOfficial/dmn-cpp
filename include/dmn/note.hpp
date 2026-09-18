@@ -126,8 +126,6 @@ class note {
   /// \param key Item name to retrieve.
   /// \return Retrieved item, if available.
   /// \throws dmn::invalid_handle If the underlying handle is empty.
-  /// \note When getting the item as a string, all non-string types are converted to string
-  /// automatically thus the type is not checked.
   template <typename T>
     requires detail::has_object_convert<T> || std::is_same_v<T, dmn::object>
   [[nodiscard]] auto get(std::string_view key) const -> std::optional<T> {

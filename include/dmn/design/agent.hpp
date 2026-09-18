@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dmn/design/flags.hpp"
 #include "dmn/database.hpp"
 #include "dmn/note.hpp"
 
@@ -10,7 +11,14 @@ class agent {
 
   static auto create(const dmn::database& db, std::string_view title) -> agent;
 
-  void set_code(dmn::formula code);
+  auto set_title(std::string_view title) -> agent&;
+  auto set_comment(std::string_view comment) -> agent&;
+  auto set_code(dmn::formula code) -> agent&;
+  auto set_trigger(trigger trig) -> agent&;
+
+  [[nodiscard]] auto get_title() const -> std::string;
+  [[nodiscard]] auto get_comment() const -> std::string;
+
   void save();
 
  private:
