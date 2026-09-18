@@ -4,7 +4,6 @@
 #include <domino/agents.h>
 #include <domino/osmem.h>
 
-#include "dmn/addin/session.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/error.hpp"
 #include "dmn/lmbcs.hpp"
@@ -12,8 +11,6 @@
 using dmn::lotusscript;
 
 lotusscript::lotusscript(std::string_view code) : hdl_(OSMemFree) {
-  dmn::session::instance();
-
   detail::dhandle_t dest_hdl{};
   detail::dhandle_t error_hdl{};
   {

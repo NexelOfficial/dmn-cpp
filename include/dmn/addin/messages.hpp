@@ -3,12 +3,13 @@
 #include <string>
 #include <optional>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
 class addin;
 
-class messages {
+class messages : private detail::runtime {
  public:
 #ifdef W32
   using handle_t = unsigned long;

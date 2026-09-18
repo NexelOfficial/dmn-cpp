@@ -4,7 +4,6 @@
 #include <domino/global.h>
 #include <domino/acl.h>
 
-using dmn::acl::role;
 using dmn::acl::role_map;
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)

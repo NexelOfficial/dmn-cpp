@@ -5,6 +5,8 @@
 #include <optional>
 #include <string>
 
+#include "dmn/detail/runtime.hpp"
+
 namespace dmn::acl {
 enum class authentication_state : uint8_t {
   /// User is not authenticated
@@ -17,7 +19,7 @@ enum class authentication_state : uint8_t {
   admin
 };
 
-class names {
+class names : private detail::runtime {
  public:
   names();
 

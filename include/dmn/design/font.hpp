@@ -4,11 +4,11 @@
 #include <cstddef>
 #include <array>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/design/color.hpp"
 
 namespace dmn::design {
-
-class font {
+class font : private detail::runtime {
   constexpr static uint8_t MAX_STYLES = 6;
 
  public:

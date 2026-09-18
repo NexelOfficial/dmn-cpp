@@ -1,12 +1,11 @@
-#include "dmn/addin/session.hpp"
+#include "dmn/detail/runtime.hpp"
 
 #include <domino/global.h>
-#include <domino/osmisc.h>
 
 #include "dmn/error.hpp"
 
-using dmn::session;
-using dmn::thread;
+using dmn::detail::session;
+using dmn::detail::thread;
 
 session::session() {
   const dmn::status result = NotesInit();

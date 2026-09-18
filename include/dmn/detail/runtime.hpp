@@ -1,6 +1,6 @@
 #pragma once
 
-namespace dmn {
+namespace dmn::detail {
 struct session {
  public:
   session();
@@ -27,4 +27,9 @@ struct thread {
   thread(thread&&) = delete;
   auto operator=(thread&&) = delete;
 };
-}  // namespace dmn
+
+class runtime {
+ protected:
+  runtime() { session::instance(); }
+};
+}  // namespace dmn::detail

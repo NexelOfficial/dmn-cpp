@@ -5,6 +5,7 @@
 #include <string_view>
 #include <vector>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/design/column.hpp"
 #include "dmn/design/color.hpp"
 #include "dmn/formula.hpp"
@@ -42,7 +43,7 @@ struct view_table_format2 {
   std::array<uint16_t, 4> spare;
 };
 
-class view {
+class view : private detail::runtime {
  public:
   static auto create(const dmn::database& db, std::string_view title) -> view;
 

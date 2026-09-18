@@ -3,6 +3,7 @@
 #include <iterator>
 #include <string>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/acl/manager.hpp"
 #include "dmn/error.hpp"
 
@@ -34,7 +35,7 @@ class role {
 ///
 /// \throws dmn::invalid_handle If the underlying handle is empty.
 /// \throws dmn::native_error In case of a lower level failure.
-class role_map {
+class role_map : private detail::runtime {
  public:
   using value_type = std::pair<size_t, acl::role>;
 

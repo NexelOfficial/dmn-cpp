@@ -10,7 +10,6 @@
 #include <limits>
 #include <optional>
 
-#include "dmn/addin/session.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/acl/manager.hpp"
 #include "dmn/acl/access.hpp"
@@ -31,8 +30,6 @@ database::database(handle_t handle)
     : hdl_(std::make_shared<managed_handle_t>(handle, NSFDbClose)) {}
 
 auto database::create(std::string_view file) -> std::optional<database> {
-  (void)dmn::session::instance();
-
   const auto converted = dmn::lmbcs::from_string(file);
   const dmn::status result = NSFDbCreate(converted.c_str(), DBCLASS_NOTEFILE, FALSE);
   result.throw_if_error("Failed to create database");
@@ -40,8 +37,6 @@ auto database::create(std::string_view file) -> std::optional<database> {
 }
 
 void database::remove(std::string_view file) {
-  (void)dmn::session::instance();
-
   const auto converted = dmn::lmbcs::from_string(file);
   const dmn::status result = NSFDbDelete(converted.c_str());
   result.throw_if_error("Failed to remove database");
@@ -53,8 +48,6 @@ auto database::open(std::string_view file) -> std::optional<database> {
 
 auto database::open(std::string_view file, const dmn::acl::names& names)
   -> std::optional<database> {
-  (void)dmn::session::instance();
-
   // Allocate memory on server for names
   std::optional<detail::locker> names_obj = std::nullopt;
   if (names.get_count() > 0) {

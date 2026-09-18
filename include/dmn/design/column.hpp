@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string_view>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/design/color.hpp"
 #include "dmn/design/font.hpp"
 #include "dmn/lmbcs.hpp"
@@ -71,7 +72,7 @@ class view_column_format2 {
   friend class view;
 };
 
-class column {
+class column : private detail::runtime {
  public:
   enum class sorting : uint8_t { none, ascending, descending };
 

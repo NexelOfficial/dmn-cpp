@@ -10,6 +10,8 @@
 #include <domino/nsfdata.h>
 #include <domino/mime.h>
 
+#include "dmn/detail/runtime.hpp"
+
 using dmn::mime_error;
 using dmn::native_error;
 using dmn::status;
@@ -29,7 +31,7 @@ auto status::is_locked() const noexcept -> bool {
          value == ERR_NOTE_LOCKED_BYSOMEONE || value == ERR_NOTE_NOT_LOCKED_BY_LOCKER;
 }
 
-auto status::is_error() const noexcept -> bool { return value != dmn::no_error.value; }
+auto status::is_error() const noexcept -> bool { return value != NOERROR; }
 
 void status::throw_if_error(const char* message) const {
   if (is_error()) {
@@ -55,6 +57,7 @@ auto native_error::os_load_string(status code) -> std::optional<dmn::lmbcs> {
   dmn::lmbcs buffer;
   buffer.resize(MAX_MESSAGE_SIZE);
 
+  dmn::detail::session::instance();
   const auto out_size = OSLoadString({}, ERR(code.value), buffer.data(), buffer.size() - 1);
   if (out_size == 0) {
     return std::nullopt;

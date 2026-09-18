@@ -5,8 +5,9 @@
 #include <optional>
 #include <vector>
 
-#include "dmn/acl/names.hpp"
+#include "dmn/detail/runtime.hpp"
 #include "dmn/detail/uhandle.hpp"
+#include "dmn/acl/names.hpp"
 #include "dmn/dql.hpp"
 #include "dmn/unid.hpp"
 
@@ -22,7 +23,7 @@ class note;
 
 constexpr static size_t DEFAULT_QUERY_AMT = 0xF;
 
-class database {
+class database : protected detail::runtime {
  public:
   using handle_t = detail::dhandle_t;
   database() = delete;

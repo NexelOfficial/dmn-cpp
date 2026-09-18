@@ -5,18 +5,19 @@
 #include <chrono>
 #include <optional>
 
+#include "dmn/detail/runtime.hpp"
+
 struct tagTIMEDATE;
 
 namespace dmn {
-struct time_date {
-  std::array<uint32_t, 2> innards;
+struct time_date : protected detail::runtime {
+  std::array<uint32_t, 2> innards{};
 
   /// Convert a system clock time point to time-date.
   ///
   /// \param tp Time point to convert
   /// \return Instance of `dmn::time_date`, if available.
-  [[nodiscard]] static auto from_time_point(std::chrono::system_clock::time_point tp)
-    -> time_date;
+  [[nodiscard]] static auto from_time_point(std::chrono::system_clock::time_point tp) -> time_date;
 
   /// Convert this time-date to a system clock time point.
   ///

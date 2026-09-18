@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "dmn/detail/locker.hpp"
+#include "dmn/detail/runtime.hpp"
 #include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
@@ -12,7 +13,7 @@ template <typename T>
 struct object_value;
 }
 
-class formula {
+class formula : protected detail::runtime {
   struct header {
     uint16_t length;
     uint16_t flags;

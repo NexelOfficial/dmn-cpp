@@ -3,7 +3,6 @@
 #include <cstdint>
 
 namespace dmn::acl {
-
 // NOLINTNEXTLINE(performance-enum-size)
 enum class principal_type : uint16_t {
   unspecified = 0x0000,
