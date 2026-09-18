@@ -6,6 +6,7 @@
 #include <domino/agents.h>
 #include <domino/nif.h>
 #include <chrono>
+#include <utility>
 
 #include "dmn/design/flags.hpp"
 #include "dmn/detail/attached_object.hpp"
@@ -41,7 +42,24 @@ struct dmn::detail::note_value<dmn::design::flags> {
 };
 
 namespace ods = dmn::detail::ods;
+namespace detail = dmn::detail;
 using dmn::design::agent;
+
+namespace {
+auto get_action_item_impl(size_t code_size, ods::type action_header) -> detail::locker {
+  auto size =
+    ods::size(ods::type::cdactionheader) + ods::size(action_header) + code_size + sizeof(dmn::type);
+
+  const auto length = static_cast<uint8_t>(ods::size(ods::type::cdactionheader));
+  const BSIG header{.Signature = SIG_ACTION_HEADER, .Length = length};
+  const CDACTIONHEADER action{.Header = header};
+
+  auto lock = detail::locker::allocate(size);
+  lock.write(dmn::type::action);
+  lock.write(action, ods::type::cdactionheader);
+  return lock;
+}
+}  // namespace
 
 agent::agent(dmn::note note) : note_(std::move(note)) {};
 
@@ -85,32 +103,38 @@ auto agent::set_comment(std::string_view comment) -> agent& {
   return *this;
 }
 
+auto agent::set_code(dmn::lotusscript code) -> agent& {
+  auto code_size = static_cast<uint16_t>(code.size());
+  auto lock = get_action_item_impl(code_size, ods::type::cdactionlotusscript);
+
+  const uint16_t length = ods::size(ods::type::cdactionlotusscript) + code_size;
+  const WSIG header{.Signature = SIG_ACTION_LOTUSSCRIPT, .Length = length};
+  const CDACTIONLOTUSSCRIPT action{.Header = header, .dwScriptLen = code_size};
+  lock.write(action, ods::type::cdactionlotusscript);
+
+  const auto cursor = code.get_cursor();
+  lock.write(std::span{cursor.get_pointer(), cursor.size()});
+
+  const dmn::object obj{std::move(lock)};
+  note_.set(ASSIST_ACTION_ITEM, obj, dmn::item_flag::sign);
+  note_.set(
+    ASSIST_TYPE_ITEM, std::to_underlying(design::language::lotusscript), dmn::item_flag::sign
+  );
+  note_.set(DESIGN_FLAGS, flags::from_language(design::language::lotusscript));
+  return *this;
+}
+
 auto agent::set_code(dmn::formula code) -> agent& {
-  auto formula_size = static_cast<uint16_t>(code.size(true));
-  auto size = ods::size(ods::type::cdactionheader) + ods::size(ods::type::cdactionformula) +
-              formula_size + sizeof(dmn::type);
-  auto lock = detail::locker::allocate(size);
-  lock.write(dmn::type::action);
+  auto code_size = static_cast<uint16_t>(code.size(true));
+  auto lock = get_action_item_impl(code_size, ods::type::cdactionformula);
 
-  {
-    const auto length = static_cast<uint8_t>(ods::size(ods::type::cdactionheader));
-    const BSIG header{.Signature = SIG_ACTION_HEADER, .Length = length};
-    const CDACTIONHEADER action{.Header = header};
-    lock.write(action, ods::type::cdactionheader);
-  }
+  const uint16_t length = ods::size(ods::type::cdactionformula) + code_size;
+  const WSIG header{.Signature = SIG_ACTION_FORMULA, .Length = length};
+  const CDACTIONFORMULA action{.Header = header, .wFormulaLen = code_size};
+  lock.write(action, ods::type::cdactionformula);
 
-  {
-    const auto length = ods::size(ods::type::cdactionformula) + formula_size;
-    const WSIG header{.Signature = SIG_ACTION_FORMULA, .Length = static_cast<uint16_t>(length)};
-    const CDACTIONFORMULA action{.Header = header, .dwFlags = 0, .wFormulaLen = formula_size};
-    lock.write(action, ods::type::cdactionformula);
-  }
-
-  {
-    const auto cursor = code.get_cursor();
-    const std::span span{cursor.get_pointer(), cursor.size()};
-    lock.write(span);
-  }
+  const auto cursor = code.get_cursor();
+  lock.write(std::span{cursor.get_pointer(), cursor.size()});
 
   const dmn::object obj{std::move(lock)};
   note_.set(ASSIST_ACTION_ITEM, obj, dmn::item_flag::sign);
@@ -119,7 +143,7 @@ auto agent::set_code(dmn::formula code) -> agent& {
   return *this;
 }
 
-auto agent::set_trigger(trigger trig) -> agent& {
+auto agent::set_trigger(design::trigger trig) -> agent& {
   auto raw_trig = std::to_underlying(trig);
   note_.set(ASSIST_TRIGGER_ITEM, std::to_string(raw_trig));
 
@@ -139,6 +163,13 @@ auto agent::get_comment() const -> std::string {
 void agent::save() {
   auto now = dmn::time_date::from_time_point(std::chrono::system_clock::now());
   note_.set(ASSIST_VERSION_ITEM, now);
+
+  auto lang = design::language(note_.get<int>(ASSIST_TYPE_ITEM).value_or(0));
+  if (lang == design::language::lotusscript) {
+    const auto& db = note_.get_database();
+    const dmn::status result = NSFNoteLSCompile(db.get_handle(), note_.get_handle(), 0);
+    result.throw_if_error("Failed to compile agent LotusScript");
+  }
 
   note_.sign();
   note_.save(false);

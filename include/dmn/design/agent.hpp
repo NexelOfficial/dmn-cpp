@@ -1,7 +1,9 @@
 #pragma once
 
 #include "dmn/design/flags.hpp"
+#include "dmn/lotusscript.hpp"
 #include "dmn/database.hpp"
+#include "dmn/formula.hpp"
 #include "dmn/note.hpp"
 
 namespace dmn::design {
@@ -13,8 +15,9 @@ class agent {
 
   auto set_title(std::string_view title) -> agent&;
   auto set_comment(std::string_view comment) -> agent&;
+  auto set_code(dmn::lotusscript code) -> agent&;
   auto set_code(dmn::formula code) -> agent&;
-  auto set_trigger(trigger trig) -> agent&;
+  auto set_trigger(design::trigger trig) -> agent&;
 
   [[nodiscard]] auto get_title() const -> std::string;
   [[nodiscard]] auto get_comment() const -> std::string;

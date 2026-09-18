@@ -17,10 +17,10 @@ formula::formula(std::span<std::byte> buffer) : hdl_(OSMemFree) {
   hdl_.put(obj.release().block);
 }
 
-formula::formula(std::string_view command) : hdl_(OSMemFree) {
+formula::formula(std::string_view code) : hdl_(OSMemFree) {
   uint16_t skip = 0;
   dmn::status compile_error = dmn::no_error;
-  const auto converted = dmn::lmbcs::from_string(command);
+  const auto converted = dmn::lmbcs::from_string(code);
   const dmn::status result = NSFFormulaCompile(
     nullptr, 0, converted.c_str(), converted.size(), hdl_.data(), &skip, &compile_error.value,
     &skip, &skip, &skip, &skip

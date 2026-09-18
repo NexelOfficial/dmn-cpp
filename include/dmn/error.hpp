@@ -69,6 +69,10 @@ struct out_of_range : error {
   using error::error;
 };
 
+struct formatting_error : error {
+  using error::error;
+};
+
 struct native_error : error {
   explicit native_error(const char* message, status code);
 
