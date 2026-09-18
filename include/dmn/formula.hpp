@@ -22,10 +22,13 @@ class formula {
  public:
   using handle_t = detail::dhandle_t;
 
-  explicit formula(std::string_view command);
+  /// Create a compiled Formula object from code.
+  ///
+  /// \throws dmn::native_error If the creation failed.
+  explicit formula(std::string_view code);
 
   [[nodiscard]] auto decompile(bool is_selection_formula = false) const -> std::string;
-  [[nodiscard]] auto size() const -> size_t;
+  [[nodiscard]] auto size(bool even = false) const -> size_t;
 
   void merge(const formula& other) const;
   void add_summary(std::string_view item_name) const;

@@ -27,6 +27,10 @@ class object {
   ///
   /// \param locker Instance of `detail::locker` holding the raw memory.
   object(detail::locker locker) {
+    if (locker.get_ownership() != detail::ownership::take) {
+      throw dmn::invalid_argument("Locker must own memory in order to create an object");
+    }
+
     auto st = state(locker.get_block_id(), locker.size());
     state_ = std::make_shared<state>(st);
     owner_ = std::make_shared<detail::locker>(std::move(locker));
@@ -40,16 +44,6 @@ class object {
 
   /// Extract the type of the object.
   [[nodiscard]] auto get_type() const -> dmn::type;
-
-  /// Write data to the memory behind the object.
-  ///
-  /// \param typ Underlying Domino data type.
-  /// \param data Data buffer to write.
-  /// \throws dmn::runtime_error If the object is not an item value.
-  /// \throws dmn::native_error If the reallocation failed.
-  /// \note Writing data is not possible when the object does not belong to an item value.
-  /// \note All copies of the object will point to the new memory.
-  void write(dmn::type typ, std::span<const std::byte> data);
 
   /// Check whether the object can be converted to a type.
   template <typename T>
@@ -130,6 +124,6 @@ class object {
 
   [[nodiscard]] auto data_pair() const -> std::pair<dmn::type, detail::locker>;
 
-  friend class note;
+  friend class dmn::note;
 };
 }  // namespace dmn

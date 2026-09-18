@@ -59,22 +59,21 @@ view::view(dmn::note note)
       } {};
 
 auto view::create(const dmn::database& db, std::string_view title) -> view {
-  NOTEID noteid = 0;
   const auto converted = dmn::lmbcs::from_string(title);
-  const dmn::status result = NIFFindDesignNoteExt(
-    db.get_handle(), converted.c_str(), NOTE_CLASS_VIEW, DFLAGPAT_VIEW, &noteid, 0
-  );
+  const dmn::status result =
+    NIFFindDesignNote(db.get_handle(), converted.c_str(), NOTE_CLASS_VIEW, nullptr);
   if (!result.is_not_found()) {
     result.throw_if_error("Failed to check for existing view design");
     throw dmn::runtime_error("View design already exists");
   }
 
   auto note = db.create_note();
-  uint16_t note_class = NOTE_CLASS_VIEW;
-  NSFNoteSetInfo(note.get_handle(), _NOTE_CLASS, &note_class);
-  note.set(VIEW_TITLE_ITEM, std::string(title));
+  note.set(VIEW_TITLE_ITEM, title);
   note.set(DESIGN_FLAGS, "PY");
   note.set("$Generator", "dmn-cpp");
+
+  uint16_t note_class = NOTE_CLASS_VIEW;
+  NSFNoteSetInfo(note.get_handle(), _NOTE_CLASS, &note_class);
 
   view out{std::move(note)};
   out.selection_ = dmn::formula{"@All"};

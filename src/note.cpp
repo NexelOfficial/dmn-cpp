@@ -145,6 +145,11 @@ void note::erase(std::string_view key) const {
   result.throw_if_error("Failed to remove key");
 }
 
+void note::sign() const {
+  const dmn::status result = NSFNoteSign(get_handle());
+  result.throw_if_error("Failed to sign note");
+}
+
 void note::save(bool force) const {
   const dmn::status result = NSFNoteUpdate(get_handle(), force ? UPDATE_FORCE : 0);
   result.throw_if_error("Failed to save note");
@@ -226,26 +231,32 @@ auto note::get_impl(dmn::lmbcs_view key) const -> std::optional<dmn::object> {
 }
 
 void note::append_impl(
-  std::string_view key, dmn::type type, std::span<const std::byte> buffer
+  std::string_view key, dmn::type type, std::span<const std::byte> buffer, uint16_t flags
 ) const {
   const auto converted = dmn::lmbcs::from_string(key);
   const auto data_type = static_cast<uint16_t>(type);
-  const auto size = buffer.size();
+  flags |= get_flags(buffer.size());
 
   const dmn::status result = NSFItemAppend(
-    get_handle(), get_flags(size), converted.c_str(), converted.size(), data_type, buffer.data(),
-    size
+    get_handle(), flags, converted.c_str(), converted.size(), data_type, buffer.data(),
+    buffer.size()
   );
   result.throw_if_error("Failed to append item value");
 }
 
 void note::modify_impl(
-  std::string_view key, dmn::type type, std::span<const std::byte> buffer
+  std::string_view key, dmn::type type, std::span<const std::byte> buffer, uint16_t flags
 ) const {
-  auto existing = get<dmn::object>(key);
-  if (!existing) {
+  auto obj = get<dmn::object>(key);
+  if (!obj || !obj->item_bid_) {
     throw dmn::invalid_argument("Provided key doesn't exist on note");
   }
 
-  existing->write(type, buffer);
+  const auto bid = std::bit_cast<BLOCKID>(*obj->item_bid_);
+  const auto data_type = static_cast<uint16_t>(type);
+  flags |= get_flags(buffer.size());
+
+  const dmn::status result =
+    NSFItemModifyValue(get_handle(), bid, flags, data_type, buffer.data(), buffer.size());
+  result.throw_if_error("Failed to modify note item value");
 }

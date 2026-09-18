@@ -16,7 +16,7 @@ struct time_date {
   /// \param tp Time point to convert
   /// \return Instance of `dmn::time_date`, if available.
   [[nodiscard]] static auto from_time_point(std::chrono::system_clock::time_point tp)
-    -> std::optional<time_date>;
+    -> time_date;
 
   /// Convert this time-date to a system clock time point.
   ///

@@ -17,7 +17,7 @@ locker::locker(detail::dhandle_t hdl, size_t size, ownership own)
     : locker(detail::block_id{.pool = hdl, .block = 0}, size, own) {}
 
 locker::locker(detail::block_id bid, size_t size, ownership own)
-    : detail::cursor(nullptr, size), size_(size), hdl_([own](detail::block_id hdl) {
+    : detail::cursor(nullptr, size), size_(size), own_(own), hdl_([own](detail::block_id hdl) {
         if (own != ownership::free) {
           OSUnlock(hdl.pool);
         }
@@ -26,7 +26,6 @@ locker::locker(detail::block_id bid, size_t size, ownership own)
         }
       }) {
   (void)dmn::session::instance();
-
   if (bid.pool == detail::dhandle_t{}) {
     return;
   }

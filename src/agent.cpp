@@ -37,6 +37,9 @@ auto agent::open(const dmn::database& db, std::string_view name) -> std::optiona
 
   handle_t handle = {};
   result = AgentOpen(db_handle, agent_id.value, &handle);
+  if (result.is_not_found()) {
+    return std::nullopt;
+  }
   result.throw_if_error("Failed to open Agent");
 
   return agent(db, handle);

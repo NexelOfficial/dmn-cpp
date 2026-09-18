@@ -27,7 +27,7 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   note.set("NumericValue", 42.5);
   note.set("FalseValue", false);
   note.set("TrueValue", true);
-  note.set("DateValue", now_td.value());
+  note.set("DateValue", now_td);
   note.set("ListValue", tags);
 
   SECTION("default values are empty") {

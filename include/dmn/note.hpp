@@ -10,6 +10,7 @@
 #include "dmn/detail/note_value.hpp"
 #include "dmn/detail/object_value.hpp"
 #include "dmn/detail/uhandle.hpp"
+#include "dmn/flags.hpp"
 #include "dmn/lmbcs.hpp"
 #include "dmn/object.hpp"
 #include "dmn/type.hpp"
@@ -77,6 +78,12 @@ class note {
   /// \throws dmn::invalid_handle If the underlying handle is empty.
   void compute_with_form() const;
 
+  /// Sign the note.
+  ///
+  /// \throws dmn::native_error If the note cannot be signed.
+  /// \throws dmn::invalid_handle If the underlying handle is empty.
+  void sign() const;
+
   /// Save the note to the database.
   ///
   /// \param force Whether to force the update.
@@ -104,12 +111,13 @@ class note {
   /// \throws dmn::native_error If the existing item cannot be removed or the new value cannot be
   /// stored.
   /// \throws dmn::invalid_handle If the underlying handle is empty.
-  template <typename T>
-    requires detail::has_note_value_apply<T>
-  void set(std::string_view key, const T& value) const {
+  template <typename T, typename... Args>
+    requires detail::has_note_value_apply<T> && (std::is_same_v<Args, dmn::item_flag> && ...)
+  void set(std::string_view key, const T& value, Args... flags) const {
+    auto joined_flags = (uint16_t{} | ... | static_cast<uint16_t>(flags));
     detail::note_value<T>::apply(value, [&](auto type, auto buffer) {
       auto func = has(key) ? &dmn::note::modify_impl : &dmn::note::append_impl;
-      std::invoke(func, this, key, type, buffer);
+      std::invoke(func, this, key, type, buffer, joined_flags);
     });
   }
 
@@ -118,8 +126,6 @@ class note {
   /// \param key Item name to retrieve.
   /// \return Retrieved item, if available.
   /// \throws dmn::invalid_handle If the underlying handle is empty.
-  /// \note When getting the item as a string, all non-string types are converted to string
-  /// automatically thus the type is not checked.
   template <typename T>
     requires detail::has_object_convert<T> || std::is_same_v<T, dmn::object>
   [[nodiscard]] auto get(std::string_view key) const -> std::optional<T> {
@@ -190,9 +196,14 @@ class note {
   [[nodiscard]] auto get_impl(dmn::lmbcs_view key) const -> std::optional<dmn::object>;
 
   /// Internal implementation used by `dmn::note::set()`.
-  void append_impl(std::string_view key, dmn::type type, std::span<const std::byte> buffer) const;
+  void append_impl(
+    std::string_view key, dmn::type type, std::span<const std::byte> buffer, uint16_t flags
+  ) const;
+
   /// Internal implementation used by `dmn::note::set()`.
-  void modify_impl(std::string_view key, dmn::type type, std::span<const std::byte> buffer) const;
+  void modify_impl(
+    std::string_view key, dmn::type type, std::span<const std::byte> buffer, uint16_t flags
+  ) const;
 
   template <typename>
   static constexpr bool always_false = false;

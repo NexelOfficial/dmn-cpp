@@ -23,26 +23,6 @@ auto object::get_type() const -> dmn::type {
   return obj.read<dmn::type>();
 }
 
-void object::write(dmn::type typ, std::span<const std::byte> data) {
-  if (!item_bid_) {
-    throw dmn::runtime_error("Object that is not an item value can't be overwritten");
-  }
-
-  auto st = ensure_state();
-  const size_t new_size = data.size() + sizeof(dmn::type);
-  if (new_size != st.size) {
-    const auto raw_item_bid = *reinterpret_cast<BLOCKID*>(&*item_bid_);
-    const dmn::status result =
-      NSFItemRealloc(raw_item_bid, reinterpret_cast<BLOCKID*>(&st.bid), new_size);
-    result.throw_if_error("Failed to reallocate object memory");
-  }
-
-  st.size = new_size;
-  detail::locker pool(st.bid, st.size, detail::ownership::borrow);
-  pool.write(typ);
-  pool.write(data);
-}
-
 auto object::as_string() const -> std::optional<std::string> {
   if (!state_ || state_->size < 2 || state_->bid.pool == detail::dhandle_t{}) {
     return std::nullopt;

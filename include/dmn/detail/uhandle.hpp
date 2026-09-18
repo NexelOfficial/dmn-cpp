@@ -19,16 +19,16 @@ class uhandle {
   ///
   /// \param fn Cleanup function that is called when the managed handle is destroyed.
   /// \note The cleanup function is never called when the handle is null.
-  explicit uhandle(cleanup_t fn) : cleanup(std::move(fn)) {}
+  explicit uhandle(cleanup_t fn) noexcept : cleanup(std::move(fn)) {}
 
   /// Create a handle wrapper from an existing handle.
   ///
   /// \param handle Handle to manage.
   /// \param fn Cleanup function that is called when the managed handle is destroyed.
   /// \note The cleanup function is never called when the handle is null.
-  explicit uhandle(T handle, cleanup_t fn) : hdl_(handle), cleanup(std::move(fn)) {}
+  explicit uhandle(T handle, cleanup_t fn) noexcept : hdl_(handle), cleanup(std::move(fn)) {}
 
-  ~uhandle() { reset(); }
+  ~uhandle() noexcept { reset(); }
   uhandle(const uhandle&) = delete;
   auto operator=(const uhandle&) -> uhandle& = delete;
 
@@ -51,7 +51,7 @@ class uhandle {
   ///
   /// Sets the handle to a null value preventing the cleanup function from being called.
   /// \return The underlying handle before releasing.
-  auto release() -> T {
+  auto release() noexcept -> T {
     auto old = hdl_;
     hdl_ = null_value();
     return old;
