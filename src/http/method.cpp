@@ -3,6 +3,8 @@
 #include <domino/global.h>
 #include <domino/dsapi.h>
 
+#include <utility>
+
 using dmn::http::method;
 
 static_assert(std::to_underlying(method::none) == kRequestNone);
