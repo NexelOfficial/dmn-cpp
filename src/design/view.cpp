@@ -194,11 +194,11 @@ auto view::build_collation() const -> dmn::object {
     }
   }
 
-  const auto descriptors_size = ods::size(ods::type::collate_descriptor) * sorted_cols.size();
-  const auto buffer_size = ods::size(ods::type::collation) + descriptors_size + item_names_size;
+  const uint16_t descriptors_size = ods::size(ods::type::collate_descriptor) * sorted_cols.size();
+  const uint16_t buffer_size = ods::size(ods::type::collation) + descriptors_size + item_names_size;
 
   const COLLATION collation{
-    .BufferSize = static_cast<uint16_t>(buffer_size),
+    .BufferSize = buffer_size,
     .Items = static_cast<uint16_t>(sorted_cols.size()),
     .signature = COLLATION_SIGNATURE,
   };

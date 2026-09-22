@@ -60,7 +60,7 @@ auto names::get_name(size_t index) const -> std::optional<std::string> {
   auto current = dmn::lmbcs_view{ptr, buffer_.size()}.substr(sizeof(NAMES_LIST));
 
   for (size_t i = 0; i < index; ++i) {
-    const auto nul = current.find(static_cast<dmn::lmbcs::char_t>(0));
+    const auto nul = current.find(dmn::lmbcs::char_t{});
     if (nul == dmn::lmbcs_view::npos) {
       return std::nullopt;
     }
@@ -68,7 +68,7 @@ auto names::get_name(size_t index) const -> std::optional<std::string> {
     current = current.substr(nul + 1);
   }
 
-  const auto nul = current.find(static_cast<dmn::lmbcs::char_t>(0));
+  const auto nul = current.find(dmn::lmbcs::char_t{});
   if (nul == dmn::lmbcs_view::npos) {
     return std::nullopt;
   }

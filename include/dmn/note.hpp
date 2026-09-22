@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <regex>
 #include <string>
 #include <unordered_map>
@@ -115,7 +116,7 @@ class note : protected detail::runtime {
   template <typename T, typename... Args>
     requires detail::has_note_value_apply<T> && (std::is_same_v<Args, dmn::item_flag> && ...)
   void set(std::string_view key, const T& value, Args... flags) const {
-    auto joined_flags = (uint16_t{} | ... | static_cast<uint16_t>(flags));
+    auto joined_flags = (uint16_t{} | ... | std::to_underlying(flags));
     detail::note_value<T>::apply(value, [&](auto type, auto buffer) {
       auto func = has(key) ? &dmn::note::modify_impl : &dmn::note::append_impl;
       std::invoke(func, this, key, type, buffer, joined_flags);

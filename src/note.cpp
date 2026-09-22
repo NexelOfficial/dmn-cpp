@@ -6,6 +6,7 @@
 #include <domino/nsfdb.h>
 #include <domino/osmem.h>
 #include <filesystem>
+#include <utility>
 #include <random>
 
 #include "dmn/object.hpp"
@@ -206,7 +207,7 @@ auto note::items(std::optional<std::regex> pattern) const -> object_map_t {
 
 void note::get_info_impl(dmn::info key, void* out) const {
   constexpr static uint16_t INFO_MASK = 0x8000;
-  auto raw_info = static_cast<uint16_t>(key) & ~INFO_MASK;
+  auto raw_info = std::to_underlying(key) & ~INFO_MASK;
   NSFNoteGetInfo(get_handle(), raw_info, out);
 }
 
@@ -234,7 +235,7 @@ void note::append_impl(
   std::string_view key, dmn::type type, std::span<const std::byte> buffer, uint16_t flags
 ) const {
   const auto converted = dmn::lmbcs::from_string(key);
-  const auto data_type = static_cast<uint16_t>(type);
+  const auto data_type = std::to_underlying(type);
   flags |= get_flags(buffer.size());
 
   const dmn::status result = NSFItemAppend(
@@ -253,7 +254,7 @@ void note::modify_impl(
   }
 
   const auto bid = std::bit_cast<BLOCKID>(*obj->item_bid_);
-  const auto data_type = static_cast<uint16_t>(type);
+  const auto data_type = std::to_underlying(type);
   flags |= get_flags(buffer.size());
 
   const dmn::status result =
