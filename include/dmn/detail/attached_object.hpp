@@ -2,12 +2,13 @@
 
 #include <optional>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/database.hpp"
 #include "dmn/note.hpp"
 
 namespace dmn::detail {
-class attached_object {
+class attached_object : private detail::runtime {
  public:
   enum class type : uint16_t {
     file = 0,

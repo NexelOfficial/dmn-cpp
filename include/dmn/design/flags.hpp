@@ -4,6 +4,8 @@
 #include <string>
 #include <array>
 
+#include "dmn/detail/runtime.hpp"
+
 namespace dmn::design {
 constexpr static uint8_t MAX_DESIGN_FLAGS = 64;
 
@@ -82,13 +84,13 @@ enum class flag : char {
   java_file = '['
 };
 
-class flags {
+class flags : private detail::runtime {
  public:
   [[nodiscard]] static auto from_language(language lang) noexcept -> flags;
   [[nodiscard]] auto add_flag(flag fg) noexcept -> bool;
   [[nodiscard]] auto to_string() const -> std::string;
 
  private:
-  std::array<flag, MAX_DESIGN_FLAGS> buffer_;
+  std::array<flag, MAX_DESIGN_FLAGS> buffer_{};
 };
 }  // namespace dmn::design

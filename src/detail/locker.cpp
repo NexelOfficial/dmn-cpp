@@ -4,10 +4,9 @@
 #include <domino/osmem.h>
 #include <domino/pool.h>
 
-#include "dmn/error.hpp"
-#include "dmn/addin/session.hpp"
 #include "dmn/detail/uhandle.hpp"
 #include "dmn/detail/block.hpp"
+#include "dmn/error.hpp"
 
 using dmn::detail::locker;
 
@@ -25,7 +24,6 @@ locker::locker(detail::block_id bid, size_t size, ownership own)
           OSMemFree(hdl.pool);
         }
       }) {
-  (void)dmn::session::instance();
   if (bid.pool == detail::dhandle_t{}) {
     return;
   }
@@ -42,7 +40,6 @@ locker::locker(detail::block_id bid, size_t size, ownership own)
 }
 
 auto locker::allocate_impl(size_t size, ownership own) -> locker {
-  (void)dmn::session::instance();
   if (size == 0) {
     throw dmn::invalid_argument("Size cannot be zero");
   }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <cstddef>
 
 namespace dmn::detail::ods {
 enum class type : uint16_t {

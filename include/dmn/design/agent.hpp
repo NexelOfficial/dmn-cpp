@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/design/flags.hpp"
 #include "dmn/lotusscript.hpp"
 #include "dmn/database.hpp"
@@ -7,7 +8,7 @@
 #include "dmn/note.hpp"
 
 namespace dmn::design {
-class agent {
+class agent : private detail::runtime {
  public:
   agent() = delete;
 

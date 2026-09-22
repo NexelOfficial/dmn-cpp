@@ -3,6 +3,8 @@
 #include <domino/global.h>
 #include <domino/ods.h>
 
+#include "dmn/detail/runtime.hpp"
+
 namespace ods = dmn::detail::ods;
 using ods::type;
 
@@ -228,12 +230,17 @@ static_assert(native_type(type::note_seal2_hdr) == _NOTE_SEAL2_HDR);
 static_assert(native_type(type::note_seal2) == _NOTE_SEAL2);
 static_assert(native_type(type::note_record_desc) == _NOTE_RECORD_DESC);
 
-auto ods::size(type typ) -> uint16_t { return ODSLength(static_cast<uint16_t>(typ)); }
+auto ods::size(type typ) -> uint16_t {
+  dmn::detail::session::instance();
+  return ODSLength(static_cast<uint16_t>(typ));
+}
 
 void ods::write(void* dst, const void* src, type typ) {
+  dmn::detail::session::instance();
   ODSWriteMemory(static_cast<void*>(&dst), static_cast<uint16_t>(typ), src, 1);
 }
 
 void ods::read(void* dst, const void* src, type typ) {
+  dmn::detail::session::instance();
   ODSReadMemory(static_cast<void*>(&src), static_cast<uint16_t>(typ), dst, 1);
 }

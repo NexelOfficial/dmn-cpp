@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
@@ -13,7 +14,7 @@ concept is_mime_note = requires(T note) {
   { note.get_handle() } -> std::convertible_to<detail::dhandle_t>;
 };
 
-class mime {
+class mime : protected detail::runtime {
  public:
   using handle_t = void*;
   mime() = delete;

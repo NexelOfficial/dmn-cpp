@@ -3,12 +3,12 @@
 #include <string>
 #include <optional>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/database.hpp"
 #include "dmn/note.hpp"
 
 namespace dmn {
-
-class agent {
+class agent : protected detail::runtime {
  public:
   using handle_t = void*;
   agent() = delete;

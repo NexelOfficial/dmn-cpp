@@ -6,6 +6,7 @@
 #include <string>
 
 #include "dmn/detail/locker.hpp"
+#include "dmn/detail/runtime.hpp"
 #include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
@@ -14,7 +15,7 @@ template <typename T>
 struct object_value;
 }
 
-class list {
+class list : protected detail::runtime {
  public:
   class const_iterator {
    public:

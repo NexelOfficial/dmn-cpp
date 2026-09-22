@@ -4,7 +4,6 @@
 #include <string_view>
 
 namespace dmn {
-
 class lmbcs : public std::basic_string<unsigned char> {
  public:
   using base_type = std::basic_string<unsigned char>;

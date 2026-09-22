@@ -4,6 +4,8 @@
 #include <domino/dsapi.h>
 #include <domino/osmisc.h>
 
+#include "dmn/detail/runtime.hpp"
+
 using dmn::lmbcs;
 using dmn::lmbcs_view;
 
@@ -19,6 +21,7 @@ auto to_string_impl(dmn::lmbcs_view str) -> std::string {
   std::string out{};
   out.resize(str.size() * 2);
 
+  dmn::detail::session::instance();
   const auto out_len =
     OSTranslate(OS_TRANSLATE_LMBCS_TO_UTF8, str.data(), str.size(), out.data(), out.size());
   out.resize(out_len);
@@ -34,6 +37,7 @@ auto lmbcs::from_string(std::string_view str) -> lmbcs {
   lmbcs out{};
   out.resize(str.size() * 2);
 
+  dmn::detail::session::instance();
   const auto out_len =
     OSTranslate(OS_TRANSLATE_UTF8_TO_LMBCS, str.data(), str.size(), out.data(), out.size());
   out.resize(out_len);

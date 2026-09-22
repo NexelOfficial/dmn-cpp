@@ -5,11 +5,12 @@
 #include <optional>
 #include <functional>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/detail/uhandle.hpp"
 #include "dmn/lmbcs.hpp"
 
 namespace dmn {
-class addin {
+class addin : private detail::runtime {
  public:
   using function_t = std::function<void()>;
 

@@ -6,6 +6,7 @@
 #include <string_view>
 #include <vector>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/detail/uhandle.hpp"
 #include "dmn/acl/names.hpp"
 #include "dmn/acl/flag.hpp"
@@ -17,7 +18,7 @@ class role;
 class entry;
 class access;
 
-class manager {
+class manager : private detail::runtime {
  public:
   using handle_t = dmn::detail::dhandle_t;
   manager() = delete;

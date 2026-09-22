@@ -6,7 +6,6 @@
 #include <domino/mq.h>
 #include <format>
 
-#include "dmn/addin/session.hpp"
 #include "dmn/error.hpp"
 
 using dmn::messages;
@@ -14,8 +13,6 @@ using dmn::messages;
 static_assert(sizeof(messages::handle_t) == sizeof(MQHANDLE));
 
 auto messages::open(std::string_view name) -> messages {
-  (void)dmn::session::instance();
-
   handle_t handle = {};
   const std::string final_name = std::format("{}{}", TASK_QUEUE_PREFIX, name);
   const auto converted = dmn::lmbcs::from_string(final_name);

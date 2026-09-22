@@ -5,12 +5,12 @@
 #include <optional>
 #include <string>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/detail/uhandle.hpp"
 #include "dmn/list.hpp"
 
 namespace dmn {
-
-class mail {
+class mail : protected detail::runtime {
  public:
   /// Create a new mail message.
   ///

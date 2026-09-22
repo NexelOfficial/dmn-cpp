@@ -9,6 +9,7 @@
 
 #include "dmn/detail/note_value.hpp"
 #include "dmn/detail/object_value.hpp"
+#include "dmn/detail/runtime.hpp"
 #include "dmn/detail/uhandle.hpp"
 #include "dmn/flags.hpp"
 #include "dmn/lmbcs.hpp"
@@ -20,7 +21,7 @@
 namespace dmn {
 class strlist;
 
-class note {
+class note : protected detail::runtime {
  public:
   using object_map_t = std::unordered_map<std::string, dmn::object>;
   using handle_t = detail::dhandle_t;

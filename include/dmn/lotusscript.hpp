@@ -3,10 +3,11 @@
 #include <string_view>
 
 #include "dmn/detail/locker.hpp"
+#include "dmn/detail/runtime.hpp"
 #include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
-class lotusscript {
+class lotusscript : protected detail::runtime {
  public:
   using handle_t = detail::dhandle_t;
 

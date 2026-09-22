@@ -5,6 +5,7 @@
 #include <span>
 #include <type_traits>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/detail/ods.hpp"
 #include "dmn/error.hpp"
 
@@ -15,7 +16,7 @@ concept is_container_like = requires(T t) {
 };
 
 namespace dmn::detail {
-class cursor {
+class cursor : protected detail::runtime {
  public:
   cursor(std::byte* ptr, size_t size) noexcept : buffer_(ptr, size) {
     if (ptr == nullptr) {

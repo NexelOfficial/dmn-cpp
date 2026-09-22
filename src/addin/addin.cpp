@@ -6,7 +6,6 @@
 
 #include <exception>
 
-#include "dmn/addin/session.hpp"
 #include "dmn/addin/messages.hpp"
 #include "dmn/error.hpp"
 
@@ -32,8 +31,6 @@ auto to_escaped_lmbcs(std::string_view text) -> dmn::lmbcs {
 }  // namespace
 
 auto addin::create(std::string_view name) -> addin {
-  (void)dmn::session::instance();
-
   HMODULE module_handle{};
   detail::dhandle_t temp_status_line{};
   AddInQueryDefaults(&module_handle, &temp_status_line);

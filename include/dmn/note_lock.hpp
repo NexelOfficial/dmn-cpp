@@ -2,11 +2,12 @@
 
 #include <utility>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/database.hpp"
 #include "dmn/error.hpp"
 
 namespace dmn {
-class note_lock {
+class note_lock : protected detail::runtime {
  public:
   note_lock() = delete;
   note_lock(dmn::database db, dmn::note_id noteid) noexcept

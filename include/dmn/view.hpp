@@ -6,6 +6,7 @@
 #include <string_view>
 #include <vector>
 
+#include "dmn/detail/runtime.hpp"
 #include "dmn/database.hpp"
 #include "dmn/object.hpp"
 
@@ -14,7 +15,7 @@ class database;
 
 constexpr static uint8_t MAX_TUMBLER_LEVELS = 32;
 
-class view {
+class view : protected detail::runtime {
  public:
   struct entry {
     dmn::note_id noteid;
