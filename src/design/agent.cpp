@@ -46,7 +46,7 @@ namespace detail = dmn::detail;
 using dmn::design::agent;
 
 namespace {
-auto get_action_item_impl(size_t code_size, ods::type action_header) -> detail::locker {
+auto get_action_item_impl(uint16_t code_size, ods::type action_header) -> detail::locker {
   auto size =
     ods::size(ods::type::cdactionheader) + ods::size(action_header) + code_size + sizeof(dmn::type);
 

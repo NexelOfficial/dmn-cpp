@@ -28,9 +28,9 @@ constexpr auto entry_flag_mask = dmn::acl::flags(
   dmn::acl::flag::create_folder, dmn::acl::flag::create_lotusscript, dmn::acl::flag::public_reader,
   dmn::acl::flag::public_writer, dmn::acl::flag::monitors_disallowed, dmn::acl::flag::no_replicate
 );
-constexpr uint16_t principal_type_mask = static_cast<uint16_t>(dmn::acl::principal_type::server) |
-                                         static_cast<uint16_t>(dmn::acl::principal_type::person) |
-                                         static_cast<uint16_t>(dmn::acl::principal_type::group);
+constexpr uint16_t principal_type_mask = std::to_underlying(dmn::acl::principal_type::server) |
+                                         std::to_underlying(dmn::acl::principal_type::person) |
+                                         std::to_underlying(dmn::acl::principal_type::group);
 
 struct enum_context {
   std::vector<dmn::acl::entry>* entries;
@@ -39,7 +39,7 @@ struct enum_context {
 };
 
 [[nodiscard]] auto native_flags(const dmn::acl::entry& value) -> uint16_t {
-  auto result = value.get_access().flags | static_cast<uint16_t>(value.get_type());
+  auto result = value.get_access().flags | std::to_underlying(value.get_type());
   if (value.is_administration_server()) {
     result |= ACL_FLAG_ADMIN_SERVER;
   }
@@ -182,7 +182,7 @@ auto manager::add_entry(
   auto privileges = roles_to_native(*this, entry.access_.roles);
 
   const dmn::status result = ACLAddEntry(
-    get_handle(), converted_name.c_str(), static_cast<uint16_t>(entry.access_.level), &privileges,
+    get_handle(), converted_name.c_str(), std::to_underlying(entry.access_.level), &privileges,
     native_flags(entry)
   );
   result.throw_if_error("Failed to add ACL entry");
@@ -206,7 +206,7 @@ void manager::update_entry(std::string_view name, const dmn::acl::entry& value) 
   }
 
   const dmn::status result = ACLUpdateEntry(
-    get_handle(), old_name, update_flags, new_name, static_cast<uint16_t>(value.access_.level),
+    get_handle(), old_name, update_flags, new_name, std::to_underlying(value.access_.level),
     &privileges, native_flags(value)
   );
   result.throw_if_error("Failed to update ACL entry");

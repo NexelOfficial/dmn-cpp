@@ -13,7 +13,7 @@ namespace dmn::acl {
 template <typename... Args>
   requires(std::is_same_v<Args, flag> && ...)
 [[nodiscard]] constexpr auto flags(Args... values) noexcept -> uint16_t {
-  return (uint16_t{} | ... | static_cast<uint16_t>(values));
+  return (uint16_t{} | ... | std::to_underlying(values));
 }
 
 struct access {
@@ -33,7 +33,7 @@ struct access {
     (add(std::forward<Args>(args)), ...);
   }
 
-  constexpr void add_flag(acl::flag value) noexcept { flags |= static_cast<uint16_t>(value); }
+  constexpr void add_flag(acl::flag value) noexcept { flags |= std::to_underlying(value); }
 
   constexpr void add_role(acl::role value) {
     if (!has_role(value)) {
@@ -42,7 +42,7 @@ struct access {
   }
 
   [[nodiscard]] constexpr auto has_flag(acl::flag value) const noexcept -> bool {
-    return (static_cast<uint16_t>(flags) & static_cast<uint16_t>(value)) != 0;
+    return (flags & std::to_underlying(value)) != 0;
   }
 
   [[nodiscard]] constexpr auto has_role(const acl::role& wanted) const -> bool {

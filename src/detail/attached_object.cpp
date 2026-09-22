@@ -4,6 +4,8 @@
 #include <domino/nsfnote.h>
 #include <domino/nsfobjec.h>
 
+#include <utility>
+
 #include "dmn/error.hpp"
 
 using dmn::detail::attached_object;
@@ -11,10 +13,10 @@ using type = dmn::detail::attached_object::type;
 
 static_assert(sizeof(attached_object::handle_t) == sizeof(DWORD));
 
-static_assert(static_cast<uint16_t>(type::file) == OBJECT_FILE);
-static_assert(static_cast<uint16_t>(type::assist_run_data) == OBJECT_ASSIST_RUNDATA);
-static_assert(static_cast<uint16_t>(type::filter_left_to_do) == OBJECT_FILTER_LEFTTODO);
-static_assert(static_cast<uint16_t>(type::unknown) == OBJECT_UNKNOWN);
+static_assert(std::to_underlying(type::file) == OBJECT_FILE);
+static_assert(std::to_underlying(type::assist_run_data) == OBJECT_ASSIST_RUNDATA);
+static_assert(std::to_underlying(type::filter_left_to_do) == OBJECT_FILTER_LEFTTODO);
+static_assert(std::to_underlying(type::unknown) == OBJECT_UNKNOWN);
 
 attached_object::attached_object(dmn::database db, type object_type, size_t size)
     : db_(std::move(db)),
@@ -32,9 +34,7 @@ attached_object::attached_object(dmn::database db, type object_type, size_t size
 void attached_object::append_to_note(const dmn::note& note, std::string_view key) const {
   const auto item_size = sizeof(dmn::type) + ods::size(ods::type::object_descriptor);
 
-  const OBJECT_DESCRIPTOR desc{
-    .ObjectType = static_cast<uint16_t>(object_type_), .RRV = hdl_.get()
-  };
+  const OBJECT_DESCRIPTOR desc{.ObjectType = std::to_underlying(object_type_), .RRV = hdl_.get()};
 
   auto lock = detail::locker::allocate(item_size);
   lock.write(dmn::type::object);
@@ -68,7 +68,7 @@ void attached_object::write(detail::locker locker) {
 auto attached_object::size() const -> size_t {
   DWORD size = 0;
   const dmn::status result = NSFDbGetObjectSize(
-    db_.get_handle(), hdl_.get(), static_cast<uint16_t>(object_type_), &size, nullptr, nullptr
+    db_.get_handle(), hdl_.get(), std::to_underlying(object_type_), &size, nullptr, nullptr
   );
   result.throw_if_error("Failed to obtain attached object size");
   return size;
