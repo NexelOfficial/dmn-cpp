@@ -42,7 +42,7 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE_THROWS_AS(value.as<double>(), dmn::conversion_error);
   }
 
-  SECTION("text values convert to strings only") {
+  SECTION("text values convert to strings and text lists only") {
     const auto text = note.get<dmn::object>("TextValue").value();
     REQUIRE_NOTHROW(note.set("TextValueCopy", text));
     REQUIRE(note.get_type("TextValueCopy") == dmn::type::text);
@@ -56,6 +56,11 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE(text.try_as<bool>() == std::nullopt);
     REQUIRE(text.as_string() == "🐶🐶🐶");
     REQUIRE_THROWS_AS(text.as<double>(), dmn::conversion_error);
+
+    REQUIRE_FALSE(text.is<dmn::list>());
+    REQUIRE(text.try_as<dmn::list>().has_value());
+    REQUIRE(text.try_as<dmn::list>()->size() == 1);
+    REQUIRE(text.try_as<dmn::list>()->at(0) == "🐶🐶🐶");
   }
 
   SECTION("number values convert to multiple numbers") {
