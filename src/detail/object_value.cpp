@@ -45,7 +45,16 @@ auto object_value<dmn::time_date>::is(detail::cursor& cs) -> bool {
 }
 
 auto object_value<dmn::list>::convert(detail::cursor& cs) -> std::optional<dmn::list> {
-  if (is(cs)) {
+  auto typ = cs.read<dmn::type>();
+  if (typ == dmn::type::text) {
+    cs.set_offset(0);
+    auto value = object_value<std::string>::convert(cs);
+
+    dmn::list list{};
+    list.push_back(value.value_or(""));
+    return list;
+  }
+  if (typ == dmn::type::text_list) {
     return dmn::list({cs.get_pointer(0), cs.size()});
   }
   return std::nullopt;
