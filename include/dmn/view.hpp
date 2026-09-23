@@ -15,6 +15,10 @@ class database;
 
 constexpr static uint8_t MAX_TUMBLER_LEVELS = 32;
 
+/// Open Domino view used to query and iterate its entries.
+///
+/// \throws dmn::invalid_handle If an underlying handle is empty.
+/// \throws dmn::native_error In case of a lower level failure.
 class view : protected detail::runtime {
  public:
   struct entry {
@@ -39,29 +43,23 @@ class view : protected detail::runtime {
   ///
   /// \param opts Query options. See `dmn::view::query_options` for details.
   /// \param func Iteration function to call.
-  /// \throws dmn::native_error If the view search fails.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void iterate(const query_options& opts, const function_t& func) const;
 
   /// Iterate over view entries.
   ///
   /// \param func Iteration function to call.
-  /// \throws dmn::native_error If the view search fails.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void iterate(const function_t& func) const { iterate(query_options{}, func); }
 
   /// Get entries from the view.
   ///
   /// \param opts Query options. See `dmn::view::query_options` for details.
   /// \return Entries found in the view.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto get_entries(const query_options& opts) const -> std::vector<entry>;
 
   /// Get entries from the view.
   ///
   /// \param opts Query options. See `dmn::view::query_options` for details.
   /// \return Entries found in the view.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto get_entries() const -> std::vector<entry> {
     return get_entries(query_options{});
   }

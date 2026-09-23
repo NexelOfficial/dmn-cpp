@@ -9,6 +9,10 @@
 #include "dmn/acl/access.hpp"
 
 namespace dmn::acl {
+/// Entry in a database access control list.
+///
+/// \throws dmn::invalid_handle If the underlying handle is empty.
+/// \throws dmn::native_error In case of a lower level failure.
 class entry : private detail::runtime {
  public:
   using handle_t = dmn::detail::dhandle_t;
@@ -18,18 +22,37 @@ class entry : private detail::runtime {
     bool administration_server
   );
 
-  /// Empty for Domino's default ACL entry.
+  /// Get the name for this entry.
   [[nodiscard]] auto get_name() const noexcept -> std::string_view;
+
+  /// Get the access for this entry.
   [[nodiscard]] auto get_access() const noexcept -> const acl::access&;
+
+  /// Get the base access level for this entry.
   [[nodiscard]] auto get_level() const noexcept -> acl::level;
+
+  /// Get the principal type for this entry.
   [[nodiscard]] auto get_type() const noexcept -> principal_type;
+
+  /// Get whether this entry is an administration server or not.
   [[nodiscard]] auto is_administration_server() const noexcept -> bool;
 
+  /// Rename the current entry.
   auto set_name(std::string_view name) -> entry&;
+
+  /// Update the access for this entry.
   auto set_access(acl::access value) -> entry&;
+
+  /// Set the base access level for this entry.
   auto set_level(acl::level value) -> entry&;
+
+  /// Change the principal type of this entry.
   auto set_type(principal_type value) -> entry&;
+
+  /// Change whether this entry is an administration server or not.
   auto set_administration_server(bool value) -> entry&;
+
+  /// Remove the current entry from the ACL.
   void remove();
 
   friend auto operator==(const entry& lhs, const entry& rhs) noexcept -> bool {

@@ -7,6 +7,9 @@
 #include <vector>
 
 namespace dmn {
+/// Build and render Domino Query Language expressions.
+///
+/// \throws dmn::invalid_argument If an argument or expression is invalid.
 class dql {
  public:
   struct date_time {
@@ -33,7 +36,6 @@ class dql {
   ///
   /// \param value Raw DQL datetime string.
   /// \return Wrapped datetime value.
-  /// \throws dmn::invalid_argument If the provided value is empty.
   static auto datetime(std::string value) -> date_time;
 
   /// Create an equality comparison expression.
@@ -41,7 +43,6 @@ class dql {
   /// \param field Field identifier to compare.
   /// \param value Value to compare against.
   /// \return DQL equality expression.
-  /// \throws dmn::invalid_argument If the field identifier is invalid.
   static auto eq(std::string field, value_t value) -> expression;
 
   /// Create a non-equality comparison expression.
@@ -49,7 +50,6 @@ class dql {
   /// \param field Field identifier to compare.
   /// \param value Value to compare against.
   /// \return DQL non-equality expression.
-  /// \throws dmn::invalid_argument If the field identifier is invalid.
   static auto ne(std::string field, value_t value) -> expression;
 
   /// Create a less-than comparison expression.
@@ -57,7 +57,6 @@ class dql {
   /// \param field Field identifier to compare.
   /// \param value Value to compare against.
   /// \return DQL less-than expression.
-  /// \throws dmn::invalid_argument If the field identifier is invalid.
   static auto lt(std::string field, value_t value) -> expression;
 
   /// Create a less-than-or-equal comparison expression.
@@ -65,7 +64,6 @@ class dql {
   /// \param field Field identifier to compare.
   /// \param value Value to compare against.
   /// \return DQL less-than-or-equal expression.
-  /// \throws dmn::invalid_argument If the field identifier is invalid.
   static auto lte(std::string field, value_t value) -> expression;
 
   /// Create a greater-than comparison expression.
@@ -73,7 +71,6 @@ class dql {
   /// \param field Field identifier to compare.
   /// \param value Value to compare against.
   /// \return DQL greater-than expression.
-  /// \throws dmn::invalid_argument If the field identifier is invalid.
   static auto gt(std::string field, value_t value) -> expression;
 
   /// Create a greater-than-or-equal comparison expression.
@@ -81,7 +78,6 @@ class dql {
   /// \param field Field identifier to compare.
   /// \param value Value to compare against.
   /// \return DQL greater-than-or-equal expression.
-  /// \throws dmn::invalid_argument If the field identifier is invalid.
   static auto gte(std::string field, value_t value) -> expression;
 
   /// Create a contains expression.
@@ -89,28 +85,24 @@ class dql {
   /// \param field Field identifier to compare.
   /// \param text Text to search for.
   /// \return DQL contains expression.
-  /// \throws dmn::invalid_argument If the field identifier is invalid or the text is empty.
   static auto contains(std::string field, std::string text) -> expression;
 
   /// Create a logical AND expression from multiple terms.
   ///
   /// \param terms Expressions to join.
   /// \return DQL logical AND expression.
-  /// \throws dmn::invalid_argument If the provided list is empty.
   static auto all(std::vector<expression> terms) -> expression;
 
   /// Create a logical OR expression from multiple terms.
   ///
   /// \param terms Expressions to join.
   /// \return DQL logical OR expression.
-  /// \throws dmn::invalid_argument If the provided list is empty.
   static auto any(std::vector<expression> terms) -> expression;
 
   /// Render an expression as a DQL query string.
   ///
   /// \param expr Expression to render.
   /// \return Rendered DQL string.
-  /// \throws dmn::invalid_argument If the expression is malformed or the operator is unknown.
   static auto render(const expression& expr) -> std::string;
 
  private:

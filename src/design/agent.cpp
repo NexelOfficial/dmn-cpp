@@ -10,6 +10,7 @@
 
 #include "dmn/design/flags.hpp"
 #include "dmn/detail/attached_object.hpp"
+#include "dmn/detail/data_types.hpp"
 #include "dmn/detail/ods.hpp"
 #include "dmn/error.hpp"
 #include "dmn/time_date.hpp"
@@ -104,11 +105,13 @@ auto agent::set_comment(std::string_view comment) -> agent& {
 }
 
 auto agent::set_code(dmn::lotusscript code) -> agent& {
-  auto code_size = static_cast<uint16_t>(code.size());
+  auto code_size = detail::checked_cast<uint16_t>(code.size());
   auto lock = get_action_item_impl(code_size, ods::type::cdactionlotusscript);
 
-  const uint16_t length = ods::size(ods::type::cdactionlotusscript) + code_size;
-  const WSIG header{.Signature = SIG_ACTION_LOTUSSCRIPT, .Length = length};
+  const auto length = ods::size(ods::type::cdactionlotusscript) + code_size;
+  const WSIG header{
+    .Signature = SIG_ACTION_LOTUSSCRIPT, .Length = detail::checked_cast<uint16_t>(length)
+  };
   const CDACTIONLOTUSSCRIPT action{.Header = header, .dwScriptLen = code_size};
   lock.write(action, ods::type::cdactionlotusscript);
 
@@ -125,11 +128,13 @@ auto agent::set_code(dmn::lotusscript code) -> agent& {
 }
 
 auto agent::set_code(dmn::formula code) -> agent& {
-  auto code_size = static_cast<uint16_t>(code.size(true));
+  auto code_size = detail::checked_cast<uint16_t>(code.size(true));
   auto lock = get_action_item_impl(code_size, ods::type::cdactionformula);
 
-  const uint16_t length = ods::size(ods::type::cdactionformula) + code_size;
-  const WSIG header{.Signature = SIG_ACTION_FORMULA, .Length = length};
+  const auto length = ods::size(ods::type::cdactionformula) + code_size;
+  const WSIG header{
+    .Signature = SIG_ACTION_FORMULA, .Length = detail::checked_cast<uint16_t>(length)
+  };
   const CDACTIONFORMULA action{.Header = header, .wFormulaLen = code_size};
   lock.write(action, ods::type::cdactionformula);
 

@@ -3,7 +3,9 @@
 #include <domino/global.h>
 #include <domino/nsfsearc.h>
 #include <domino/osmem.h>
+#include <cstdint>
 
+#include "dmn/detail/data_types.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/lmbcs.hpp"
 #include "dmn/error.hpp"
@@ -80,10 +82,13 @@ void formula::add_item_name(dmn::lmbcs_view item_name) const {
     throw dmn::runtime_error("Formula already has an item name");
   }
 
-  const auto section_size = sizeof(uint16_t) + item_name.size();
+  const auto name_size = detail::checked_cast<uint16_t>(item_name.size());
+  const auto section_size = sizeof(uint16_t) + name_size;
   const auto padding = section_size & 1U;
-  const auto padded_size = section_size + padding;
-  const auto new_length = hdr.length + padded_size;
+  
+  const auto padded_size = detail::checked_cast<uint16_t>(section_size + padding);
+  const auto new_length = detail::checked_cast<uint16_t>(hdr.length + padded_size);
+  const auto new_offset = detail::checked_cast<uint16_t>(hdr.offset + padded_size);
 
   const dmn::status result = OSMemRealloc(get_handle(), new_length);
   result.throw_if_error("Failed to resize formula memory");
@@ -95,16 +100,12 @@ void formula::add_item_name(dmn::lmbcs_view item_name) const {
     hdr.length - sizeof(header)
   );
 
-  const header new_hdr{
-    .length = static_cast<uint16_t>(new_length),
-    .flags = 2,
-    .offset = static_cast<uint16_t>(hdr.offset + padded_size)
-  };
+  const header new_hdr{.length = new_length, .flags = 2, .offset = new_offset};
 
   cursor.set_offset(0);
   cursor.write(new_hdr);
-  cursor.write(static_cast<uint16_t>(item_name.size()));
-  cursor.write(std::span{item_name.data(), item_name.size()});
+  cursor.write(name_size);
+  cursor.write(std::span{item_name.data(), name_size});
 
   if (padding != 0) {
     cursor.write(std::byte{0});

@@ -11,6 +11,7 @@
 #include <optional>
 
 #include "dmn/detail/locker.hpp"
+#include "dmn/detail/uhandle.hpp"
 #include "dmn/acl/manager.hpp"
 #include "dmn/acl/access.hpp"
 #include "dmn/acl/names.hpp"
@@ -33,7 +34,7 @@ auto database::create(std::string_view file) -> std::optional<database> {
   const auto converted = dmn::lmbcs::from_string(file);
   const dmn::status result = NSFDbCreate(converted.c_str(), DBCLASS_NOTEFILE, FALSE);
   result.throw_if_error("Failed to create database");
-  return database::open(file, {});
+  return database::open(file);
 }
 
 void database::remove(std::string_view file) {
@@ -42,18 +43,9 @@ void database::remove(std::string_view file) {
   result.throw_if_error("Failed to remove database");
 }
 
-auto database::open(std::string_view file) -> std::optional<database> {
-  return database::open(file, {});
-}
-
-auto database::open(std::string_view file, const dmn::acl::names& names)
+auto database::open(std::string_view file, std::optional<acl::names> names)
   -> std::optional<database> {
-  // Allocate memory on server for names
-  std::optional<detail::locker> names_obj = std::nullopt;
-  if (names.get_count() > 0) {
-    names_obj.emplace(detail::locker::allocate<std::byte>(names.buffer()));
-  }
-  const detail::dhandle_t names_hdl = names_obj ? names_obj->get_handle() : NULLHANDLE;
+  const detail::dhandle_t names_hdl = names ? names->get_handle() : detail::dhandle_t{};
 
   handle_t handle = {};
   const auto converted = dmn::lmbcs::from_string(file);

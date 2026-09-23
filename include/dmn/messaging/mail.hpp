@@ -10,6 +10,11 @@
 #include "dmn/list.hpp"
 
 namespace dmn {
+/// Mail message being composed for delivery.
+///
+/// \throws dmn::invalid_handle If an underlying handle is empty.
+/// \throws dmn::native_error In case of a lower level failure.
+/// \throws dmn::out_of_range If a recipient list exceeds its capacity.
 class mail : protected detail::runtime {
  public:
   /// Create a new mail message.
@@ -17,8 +22,6 @@ class mail : protected detail::runtime {
   /// Opens or creates a mail message file and creates a new message within it.
   ///
   /// \param mailbox Mailbox to create the message in. Defaults to "mail.box".
-  /// \return Instance of `dmn::main`.
-  /// \throws dmn::native_error If the message file cannot be opened or created.
   static auto create(std::optional<std::string_view> mailbox = std::nullopt) -> mail;
 
   /// Set the message body.
@@ -28,8 +31,7 @@ class mail : protected detail::runtime {
   ///
   /// \param body Message body content.
   /// \param content_type MIME content type to use.
-  /// \throws dmn::native_error If the MIME content cannot be created or written.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
+  /// \throws dmn::mime_error If writing the MIME content fails.
   void set_body(std::string body, std::string content_type = "text/html") const;
 
   /// Add a primary recipient.
@@ -54,7 +56,6 @@ class mail : protected detail::runtime {
   ///
   /// \param from Sender email address.
   /// \param subject Message subject.
-  /// \throws dmn::native_error If the sending process failed.
   /// \throws dmn::runtime_error If no recipients were added to the mail.
   void send(std::string_view from, std::string_view subject);
 

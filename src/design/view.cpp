@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "dmn/design/column.hpp"
+#include "dmn/detail/data_types.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/design/font.hpp"
 #include "dmn/database.hpp"
@@ -125,7 +126,7 @@ auto view::build_view_format() -> dmn::object {
 
   for (auto& current : columns_) {
     if (current.formula_.size() == 0) {
-      throw dmn::invalid_argument("View column formula is empty");
+      throw dmn::runtime_error("View column formula is empty");
     }
 
     if (current.item_name_.empty()) {
@@ -194,12 +195,12 @@ auto view::build_collation() const -> dmn::object {
     }
   }
 
-  const uint16_t descriptors_size = ods::size(ods::type::collate_descriptor) * sorted_cols.size();
-  const uint16_t buffer_size = ods::size(ods::type::collation) + descriptors_size + item_names_size;
+  const auto descriptors_size = ods::size(ods::type::collate_descriptor) * sorted_cols.size();
+  const auto buffer_size = ods::size(ods::type::collation) + descriptors_size + item_names_size;
 
   const COLLATION collation{
-    .BufferSize = buffer_size,
-    .Items = static_cast<uint16_t>(sorted_cols.size()),
+    .BufferSize = detail::checked_cast<uint16_t>(buffer_size),
+    .Items = detail::checked_cast<uint16_t>(sorted_cols.size()),
     .signature = COLLATION_SIGNATURE,
   };
 
@@ -217,7 +218,7 @@ auto view::build_collation() const -> dmn::object {
       .signature = COLLATE_DESCRIPTOR_SIGNATURE,
       .keytype = key_type,
       .NameOffset = name_offset,
-      .NameLength = static_cast<uint16_t>(entry->item_name_.size()),
+      .NameLength = detail::checked_cast<uint16_t>(entry->item_name_.size()),
     };
 
     locker.write(descriptor, ods::type::collate_descriptor);

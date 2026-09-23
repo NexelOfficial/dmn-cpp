@@ -65,6 +65,10 @@ struct runtime_error : error {
   using error::error;
 };
 
+struct overflow_error : error {
+  using error::error;
+};
+
 struct out_of_range : error {
   using error::error;
 };

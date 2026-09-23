@@ -18,7 +18,7 @@ class lotusscript : protected detail::runtime {
   explicit lotusscript(std::string_view code);
 
   /// Get LotusScript code size including null terminator.
-  [[nodiscard]] auto size() const -> size_t { return size_; }
+  [[nodiscard]] auto size() const noexcept -> size_t { return size_; }
 
   [[nodiscard]] auto get_cursor() const -> detail::locker {
     return {get_handle(), size(), detail::ownership::borrow};

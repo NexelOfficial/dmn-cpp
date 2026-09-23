@@ -109,23 +109,23 @@ void LNCALLBACK read_entry(
 }
 }  // namespace
 
-manager::manager(dmn::database db, dmn::detail::dhandle_t handle, origin source)
+manager::manager(dmn::database db, dmn::detail::dhandle_t handle, bool newly_created)
     : db_(std::move(db)),
       hdl_(std::make_shared<managed_handle_t>(handle, OSMemFree)),
-      origin_(source) {}
+      newly_created_(newly_created) {}
 
 auto manager::read(const dmn::database& db) -> manager {
   dmn::detail::uhandle<dmn::detail::dhandle_t> handle(OSMemFree);
   const dmn::status result = NSFDbReadACL(db.get_handle(), handle.data());
   result.throw_if_error("Failed to read ACL");
-  return {db, handle.release(), origin::existing};
+  return {db, handle.release(), false};
 }
 
 auto manager::create(const dmn::database& db) -> manager {
   dmn::detail::uhandle<dmn::detail::dhandle_t> handle(OSMemFree);
   const dmn::status result = ACLCreate(handle.data());
   result.throw_if_error("Failed to create ACL");
-  return {db, handle.release(), origin::newly_created};
+  return {db, handle.release(), true};
 }
 
 auto manager::lookup_access(const dmn::acl::names& names) const -> dmn::acl::access {
@@ -133,9 +133,10 @@ auto manager::lookup_access(const dmn::acl::names& names) const -> dmn::acl::acc
   uint16_t access_flags = 0;
   uint16_t access_level = 0;
 
-  auto* names_list = reinterpret_cast<NAMES_LIST*>(const_cast<std::byte*>(names.buffer().data()));
-  const dmn::status result =
-    ACLLookupAccess(get_handle(), names_list, &access_level, &privileges, &access_flags, nullptr);
+  const auto lock = names.get_cursor();
+  const dmn::status result = ACLLookupAccess(
+    get_handle(), lock.get_pointer<NAMES_LIST>(), &access_level, &privileges, &access_flags, nullptr
+  );
   result.throw_if_error("Failed to look up access");
 
   auto access = dmn::acl::access{};
@@ -243,8 +244,8 @@ void manager::set_admin_server(std::string_view server) const {
 }
 
 void manager::save() {
-  const uint16_t method = origin_ == origin::newly_created ? 1 : 0;
-  const dmn::status result = NSFDbStoreACL(db_.get_handle(), get_handle(), 0, method);
+  const dmn::status result =
+    NSFDbStoreACL(db_.get_handle(), get_handle(), 0, static_cast<DWORD>(newly_created_));
   result.throw_if_error("Failed to store ACL");
-  origin_ = origin::existing;
+  newly_created_ = false;
 }

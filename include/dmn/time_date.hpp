@@ -17,6 +17,8 @@ struct time_date : protected detail::runtime {
   ///
   /// \param tp Time point to convert
   /// \return Instance of `dmn::time_date`, if available.
+  /// \throws dmn::conversion_error If the time point cannot be converted to a Domino time-date.
+  /// \throws dmn::out_of_range If the time point is outside the calendar range.
   [[nodiscard]] static auto from_time_point(std::chrono::system_clock::time_point tp) -> time_date;
 
   /// Convert this time-date to a system clock time point.

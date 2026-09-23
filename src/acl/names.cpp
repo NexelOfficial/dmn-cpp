@@ -12,29 +12,19 @@
 
 using dmn::acl::names;
 
-names::names() { buffer_.resize(sizeof(NAMES_LIST)); }
+names::names(handle_t handle) : hdl_(handle, OSMemFree) {}
 
 auto names::from_username(std::string_view name) -> names {
-  detail::dhandle_t handle = {};
+  detail::dhandle_t handle{};
   auto converted = dmn::lmbcs::from_string(name);
-  dmn::status result = NSFBuildNamesList(converted.data(), 0, &handle);
+  const dmn::status result = NSFBuildNamesList(converted.data(), 0, &handle);
   result.throw_if_error("Failed to build names list");
-
-  DWORD names_size = 0;
-  result = OSMemGetSize(handle, &names_size);
-  result.throw_if_error("Failed to determine names size");
-
-  auto names_obj = detail::locker(handle);
-
-  names out{};
-  out.buffer_.resize(names_size);
-  names_obj.read<std::byte>(out.buffer_);
-
-  return out;
+  return {handle};
 }
 
-void names::set_authentication(authentication_state state) {
-  auto* hdr = reinterpret_cast<NAMES_LIST*>(buffer_.data());
+void names::set_authentication(authentication_state state) const {
+  const auto lock = get_cursor();
+  auto* hdr = lock.get_pointer<NAMES_LIST>();
   switch (state) {
     case authentication_state::unauthenticated:
       hdr->Authenticated = 0;
@@ -56,8 +46,9 @@ auto names::get_name(size_t index) const -> std::optional<std::string> {
     return std::nullopt;
   }
 
-  const auto* ptr = reinterpret_cast<const dmn::lmbcs::char_t*>(buffer_.data());
-  auto current = dmn::lmbcs_view{ptr, buffer_.size()}.substr(sizeof(NAMES_LIST));
+  const auto lock = get_cursor();
+  const auto* ptr = lock.get_pointer<dmn::lmbcs::char_t>();
+  auto current = dmn::lmbcs_view{ptr, lock.size()}.substr(sizeof(NAMES_LIST));
 
   for (size_t i = 0; i < index; ++i) {
     const auto nul = current.find(dmn::lmbcs::char_t{});
@@ -77,9 +68,6 @@ auto names::get_name(size_t index) const -> std::optional<std::string> {
 }
 
 auto names::get_count() const -> size_t {
-  return reinterpret_cast<const NAMES_LIST*>(buffer_.data())->NumNames;
+  const auto lock = get_cursor();
+  return lock.get_pointer<NAMES_LIST>()->NumNames;
 }
-
-auto names::buffer() -> std::vector<std::byte>& { return buffer_; }
-
-auto names::buffer() const -> const std::vector<std::byte>& { return buffer_; }

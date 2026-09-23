@@ -8,10 +8,17 @@
 #include "dmn/note.hpp"
 
 namespace dmn::design {
+/// Domino agent design element.
+///
+/// \throws dmn::invalid_handle If an underlying handle is empty.
+/// \throws dmn::native_error In case of a lower level failure.
 class agent : private detail::runtime {
  public:
   agent() = delete;
 
+  /// Create an agent design element.
+  ///
+  /// \throws dmn::runtime_error If an agent with the title already exists.
   static auto create(const dmn::database& db, std::string_view title) -> agent;
 
   auto set_title(std::string_view title) -> agent&;

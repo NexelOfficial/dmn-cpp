@@ -33,7 +33,7 @@ class view_column_format {
   view_column_format();
 
  private:
-  uint16_t signature_= 0;
+  uint16_t signature_ = 0;
   uint16_t flags1_ = 0;
   uint16_t item_name_size_ = 0;
   uint16_t title_size_ = 0;
@@ -78,13 +78,28 @@ class column : private detail::runtime {
 
   column() : formula_(dmn::formula{"@DocNumber"}) {};
 
+  /// Manually set the item name.
+  ///
+  /// \warning This is generally discouraged because the item name is automatically generated on
+  /// save and duplicate item names can cause issues.
   auto set_item_name(std::string_view item_name) -> column&;
+
+  /// Set the display title.
   auto set_title(std::string_view title) -> column&;
+
+  /// Set the formula.
   auto set_formula(dmn::formula formula) -> column&;
+
+  /// Set the font that will be used in the header.
   auto set_header_font(design::font font) -> column&;
+
+  /// Set the font for all items displayed under the column.
   auto set_item_font(design::font font) -> column&;
+
+  /// Set the sorting properties.
   auto set_sorting(sorting sort, bool categorized = false) -> column&;
 
+  /// Get the sorting properties.
   [[nodiscard]] auto get_sorting() const -> std::pair<sorting, bool>;
 
  private:

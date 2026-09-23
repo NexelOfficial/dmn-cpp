@@ -15,6 +15,11 @@ template <typename T>
 struct object_value;
 }
 
+/// In-memory Domino text list.
+///
+/// \throws dmn::invalid_handle If the underlying handle is empty.
+/// \throws dmn::native_error In case of a lower level failure.
+/// \throws dmn::out_of_range If an operation exceeds the list's bounds or capacity.
 class list : protected detail::runtime {
  public:
   class const_iterator {
@@ -45,69 +50,39 @@ class list : protected detail::runtime {
   };
 
   /// Create an empty text list in memory.
-  ///
-  /// \throws dmn::native_error If allocating the list fails.
   list();
 
   /// Check whether the list contains no entries.
-  ///
-  /// \return true if the list is empty, otherwise false.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto empty() const -> bool;
 
   /// Get the number of entries in the list.
   ///
   /// \return Number of text entries.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto size() const -> size_t;
 
   /// Get the raw Domino list size.
   ///
   /// \return Size of the list buffer in bytes.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto buffer_size() const -> uint16_t;
 
   /// Get an entry by index.
-  ///
-  /// \param index Zero-based entry index.
-  /// \return Entry at the provided index.
-  /// \throws dmn::native_error If the entry cannot be retrieved.
-  /// \throws dmn::out_of_range If the index is outside the list.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] auto at(size_t index) const -> std::string;
 
   /// Append an entry to the list.
   ///
   /// \param value Entry to add.
-  /// \throws dmn::native_error If the entry cannot be added.
-  /// \throws dmn::out_of_range If the entry is too large for a Domino text list.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void push_back(std::string_view value);
 
   /// Remove the last entry from the list.
-  ///
-  /// \throws dmn::native_error If the entry cannot be removed.
-  /// \throws dmn::out_of_range If the list is empty.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void pop_back();
 
   /// Remove the entry at an index.
-  ///
-  /// \param index Zero-based entry index.
-  /// \throws dmn::native_error If the entry cannot be removed.
-  /// \throws dmn::out_of_range If the index is outside the list.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void erase(size_t index);
 
   /// Remove all entries from the list.
-  ///
-  /// \throws dmn::native_error If the list cannot be cleared.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void clear();
 
   /// Release the list handle.
-  ///
-  /// Sets the handle to a null value preventing the cleanup function from being called.
   void release() noexcept { hdl_.release(); }
 
   [[nodiscard]] auto begin() const -> const_iterator;

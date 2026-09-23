@@ -2,8 +2,8 @@
 
 #include <array>
 #include <cstdint>
+#include <deque>
 #include <string_view>
-#include <vector>
 
 #include "dmn/detail/runtime.hpp"
 #include "dmn/design/column.hpp"
@@ -43,13 +43,29 @@ struct view_table_format2 {
   std::array<uint16_t, 4> spare;
 };
 
+/// Domino view design element.
+///
+/// \throws dmn::invalid_handle If an underlying handle is empty.
+/// \throws dmn::native_error In case of a lower level failure.
 class view : private detail::runtime {
  public:
+  /// Create a view design element.
+  ///
+  /// \throws dmn::runtime_error If a view with the title already exists.
   static auto create(const dmn::database& db, std::string_view title) -> view;
 
+  /// Access or create a column.
   auto column(std::string_view title) -> design::column&;
+
+  /// Set the selection formula.
   auto set_selection_formula(dmn::formula formula) -> view&;
+
+  /// Set the background color.
   auto set_background_color(design::color color) -> view&;
+
+  /// Save the view design.
+  ///
+  /// \throws dmn::runtime_error If a column formula is misconfigured.
   void save();
 
  private:
@@ -57,7 +73,7 @@ class view : private detail::runtime {
   dmn::formula selection_;
   view_table_format table_format_{};
   view_table_format2 table_format2_{};
-  std::vector<design::column> columns_;
+  std::deque<design::column> columns_;
 
   view(dmn::note note);
 

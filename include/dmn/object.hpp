@@ -26,6 +26,7 @@ class object : protected detail::runtime {
   /// Create object from `detail::locker`.
   ///
   /// \param locker Instance of `detail::locker` holding the raw memory.
+  /// \throws dmn::invalid_argument If the locker does not own the memory.
   object(detail::locker locker);
 
   /// Check whether the object is empty.
