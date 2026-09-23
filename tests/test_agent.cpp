@@ -81,6 +81,11 @@ TEST_CASE("Formula agent can be created and ran", "[nsf]") {
   design_agent.set_code(std::move(code));
   REQUIRE_NOTHROW(design_agent.save());
 
+  const std::jthread t([&]() {
+    REQUIRE_THROWS_AS(design_agent.save(), dmn::thread_error);
+    REQUIRE_THROWS_AS(code.get_handle(), dmn::thread_error);
+  });
+
   check_modify_agent(*db, design_agent.get_title());
 }
 
@@ -91,6 +96,11 @@ TEST_CASE("LotusScript agent can be created and ran", "[nsf]") {
   auto code = dmn::lotusscript{LOTUSSCRIPT_CODE};
   design_agent.set_code(std::move(code));
   REQUIRE_NOTHROW(design_agent.save());
+  
+  const std::jthread t([&]() {
+    REQUIRE_THROWS_AS(design_agent.save(), dmn::thread_error);
+    REQUIRE_THROWS_AS(code.get_handle(), dmn::thread_error);
+  });
 
   check_modify_agent(*db, design_agent.get_title());
 }

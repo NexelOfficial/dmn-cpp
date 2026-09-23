@@ -12,34 +12,32 @@
 
 using dmn::object;
 
-object::object(detail::locker locker) {
+object::object(detail::locker locker) : bid_(locker.get_block_id()), size_(locker.size()) {
   if (locker.get_ownership() != detail::ownership::take) {
     throw dmn::invalid_argument("Locker must own memory in order to create an object");
   }
 
-  auto st = state(locker.get_block_id(), locker.size());
-  state_ = std::make_shared<state>(st);
   owner_ = std::make_shared<detail::locker>(std::move(locker));
 }
 
-auto object::empty() const noexcept -> bool { return !state_ || state_->size <= 2; }
+auto object::empty() const noexcept -> bool { return size_ <= 2; }
 
 auto object::get_type() const -> dmn::type {
-  if (!state_ || state_->size < 2 || state_->bid.pool == detail::dhandle_t{}) {
+  if (size_ < 2 || *bid_ == detail::block_id{}) {
     return dmn::type::invalid_or_unknown;
   }
 
-  detail::locker obj(state_->bid, state_->size, detail::ownership::borrow);
+  auto obj = get_cursor();
   return obj.read<dmn::type>();
 }
 
 auto object::as_string() const -> std::optional<std::string> {
-  if (!state_ || state_->size < 2 || state_->bid.pool == detail::dhandle_t{}) {
+  if (size_ < 2 || *bid_ == detail::block_id{}) {
     return std::nullopt;
   }
 
   auto [typ, obj] = data_pair();
-  const size_t data_size = state_->size - sizeof(typ);
+  const size_t data_size = size_ - sizeof(typ);
 
   if (typ == dmn::type::text) {
     // Use pointer with dmn::lmbcs_view instead of obj.read() to prevent double allocation
@@ -92,25 +90,11 @@ auto object::as_string() const -> std::optional<std::string> {
 }
 
 auto object::get_cursor() const -> detail::locker {
-  return {state_->bid, state_->size, detail::ownership::borrow};
-}
-
-auto object::ensure_state() -> state& {
-  if (!state_) {
-    throw dmn::runtime_error("Object does not have a valid state.");
-  }
-  return *state_;
-}
-
-auto object::ensure_state() const -> const state& {
-  if (!state_) {
-    throw dmn::runtime_error("Object does not have a valid state.");
-  }
-  return *state_;
+  return {bid_.get(), size_, detail::ownership::borrow};
 }
 
 auto object::data_pair() const -> std::pair<dmn::type, detail::locker> {
-  detail::locker obj(state_->bid, state_->size, detail::ownership::borrow);
+  auto obj = get_cursor();
   const auto typ = obj.read<dmn::type>();
   return {typ, std::move(obj)};
 }

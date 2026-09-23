@@ -23,6 +23,11 @@ TEST_CASE("a note can be persisted and reopened", "[nsf][database]") {
 
   REQUIRE(noteid.value != 0);
   REQUIRE(unid.to_string().size() == 32);
+  
+  const std::jthread t([&]() {
+    REQUIRE_THROWS_AS(db->get_handle(), dmn::thread_error);
+    REQUIRE_THROWS_AS(db->get_path(), dmn::thread_error);
+  });
 
   SECTION("reopen by note ID") {
     const auto reopened = db->get_note(noteid);

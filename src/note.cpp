@@ -249,7 +249,7 @@ void note::modify_impl(
   std::string_view key, dmn::type type, std::span<const std::byte> buffer, uint16_t flags
 ) const {
   auto obj = get<dmn::object>(key);
-  if (!obj || !obj->item_bid_) {
+  if (!obj || *obj->item_bid_ == detail::block_id{}) {
     throw dmn::invalid_argument("Provided key doesn't exist on note");
   }
 

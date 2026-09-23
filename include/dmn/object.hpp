@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 
+#include "dmn/detail/thread_bound.hpp"
 #include "dmn/detail/object_value.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/type.hpp"
@@ -15,11 +16,6 @@ namespace dmn {
 class note;
 
 class object : protected detail::runtime {
-  struct state {
-    detail::block_id bid{};
-    size_t size{};
-  };
-
  public:
   object() = default;
 
@@ -42,7 +38,7 @@ class object : protected detail::runtime {
   template <typename T>
     requires detail::has_object_typecheck<T>
   [[nodiscard]] auto is() const -> bool {
-    if (!state_ || state_->size < sizeof(dmn::type) || state_->bid.pool == detail::dhandle_t{}) {
+    if (size_ < sizeof(dmn::type) || *bid_ == detail::block_id{}) {
       return false;
     }
 
@@ -56,7 +52,7 @@ class object : protected detail::runtime {
   template <typename T>
     requires detail::has_object_convert<T>
   [[nodiscard]] auto try_as() const -> std::optional<T> {
-    if (!state_ || state_->size < 2 || state_->bid.pool == detail::dhandle_t{}) {
+    if (size_ < 2 || *bid_ == detail::block_id{}) {
       return std::nullopt;
     }
 
@@ -93,27 +89,27 @@ class object : protected detail::runtime {
   [[nodiscard]] auto get_cursor() const -> detail::locker;
 
  private:
-  std::optional<detail::block_id> item_bid_ = std::nullopt;
   std::shared_ptr<void> owner_;
-  std::shared_ptr<state> state_;
+  detail::thread_bound<detail::block_id> bid_;
+  detail::thread_bound<detail::block_id> item_bid_;
+  size_t size_ = 0;
 
   /// Create object from raw domino memory whilst borrowing it.
   ///
-  /// \param bid Instance of `detail::block_id` holding the raw memory.
+  /// \param bid Block ID pointing to the raw memory.
   /// \param size Size of the raw memory.
   /// \param owner Instance that owns the raw memory.
+  /// \param item_bid Optional Block ID that belongs to the item.
   /// \note Text list values must be type-prefixed
   template <class T>
   object(
     detail::block_id bid, size_t size, std::shared_ptr<T> owner,
     std::optional<detail::block_id> item_bid = std::nullopt
   )
-      : item_bid_(item_bid),
-        owner_(std::static_pointer_cast<void>(std::move(owner))),
-        state_(std::make_shared<state>(state(bid, size))) {}
-
-  [[nodiscard]] auto ensure_state() -> state&;
-  [[nodiscard]] auto ensure_state() const -> const state&;
+      : owner_(std::static_pointer_cast<void>(std::move(owner))),
+        bid_(bid),
+        size_(size),
+        item_bid_(item_bid.value_or({})) {}
 
   [[nodiscard]] auto data_pair() const -> std::pair<dmn::type, detail::locker>;
 

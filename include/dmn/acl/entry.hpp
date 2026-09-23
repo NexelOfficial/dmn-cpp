@@ -4,7 +4,6 @@
 #include <string_view>
 
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 #include "dmn/acl/manager.hpp"
 #include "dmn/acl/access.hpp"
 
@@ -15,7 +14,6 @@ namespace dmn::acl {
 /// \throws dmn::native_error In case of a lower level failure.
 class entry : private detail::runtime {
  public:
-  using handle_t = dmn::detail::dhandle_t;
   entry() = delete;
   entry(
     manager mgr, std::string name, acl::access access, principal_type type,

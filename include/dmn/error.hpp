@@ -49,6 +49,10 @@ struct error : std::exception {
   std::string message_;
 };
 
+struct thread_error : error {
+  using error::error;
+};
+
 struct invalid_handle : error {
   using error::error;
 };

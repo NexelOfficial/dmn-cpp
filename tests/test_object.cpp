@@ -30,6 +30,14 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   note.set("DateValue", now_td);
   note.set("ListValue", tags);
 
+  SECTION("objects and lists throw thread errors") {
+    const dmn::object value{};
+    const std::jthread t([&]() {
+      REQUIRE_THROWS_AS(tags.get_handle(), dmn::thread_error);
+      REQUIRE_THROWS_AS(value.get_cursor(), dmn::thread_error);
+    });
+  }
+
   SECTION("default values are empty") {
     const dmn::object value{};
 

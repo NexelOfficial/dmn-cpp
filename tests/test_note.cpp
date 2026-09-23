@@ -193,6 +193,8 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   REQUIRE(copied_tags.has_value());
   REQUIRE(copied_tags.value().size() == 3);
 
+  const std::jthread t([&]() { REQUIRE_THROWS_AS(primary.get_handle(), dmn::thread_error); });
+
   REQUIRE_NOTHROW(primary.remove(true));
   REQUIRE_FALSE(db->get_note(original_noteid).has_value());
   std::error_code ignore_ec;

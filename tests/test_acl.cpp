@@ -57,4 +57,10 @@ TEST_CASE("ACL manager persists entries, roles, and policy explicitly", "[acl][n
   auto db_with_access = dmn::database::open(db->get_path(), std::move(names));
   REQUIRE(db_with_access.has_value());
   REQUIRE(db_with_access->get_path() == db->get_path());
+
+  const std::jthread t([&]() {
+    REQUIRE_THROWS_AS(control.get_handle(), dmn::thread_error);
+    REQUIRE_THROWS_AS(names.get_handle(), dmn::thread_error);
+    REQUIRE_THROWS_AS(roles.at(0), dmn::thread_error);
+  });
 }
