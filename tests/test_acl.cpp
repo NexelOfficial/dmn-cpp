@@ -8,6 +8,7 @@
 #include "dmn/acl/manager.hpp"
 #include "dmn/acl/names.hpp"
 #include "dmn/database.hpp"
+#include "dmn/detail/thread_context.hpp"
 #include "utils.hpp"
 
 namespace acl = dmn::acl;
@@ -58,9 +59,12 @@ TEST_CASE("ACL manager persists entries, roles, and policy explicitly", "[acl][n
   REQUIRE(db_with_access.has_value());
   REQUIRE(db_with_access->get_path() == db->get_path());
 
-  const std::jthread t([&]() {
-    REQUIRE_THROWS_AS(control.get_handle(), dmn::thread_error);
-    REQUIRE_THROWS_AS(names.get_handle(), dmn::thread_error);
-    REQUIRE_THROWS_AS(roles.at(0), dmn::thread_error);
+  utils::run_threaded([&]() {
+    REQUIRE_THROWS_AS(db_with_access->get_handle(), dmn::thread_error);
+    const dmn::detail::thread_context ctx{};
+    REQUIRE_THROWS_AS(db_with_access->get_handle(), dmn::thread_access_error);
+    REQUIRE_THROWS_AS(control.get_handle(), dmn::thread_access_error);
+    REQUIRE_THROWS_AS(names.get_handle(), dmn::thread_access_error);
+    REQUIRE_THROWS_AS(roles.at(0), dmn::thread_access_error);
   });
 }

@@ -136,7 +136,7 @@ class uhandle {
 
   void check_thread() const {
     if (!is_owner_thread()) {
-      throw dmn::thread_error("Handle accessed from non-owning thread");
+      throw dmn::thread_access_error("Handle accessed from non-owning thread");
     }
   }
 

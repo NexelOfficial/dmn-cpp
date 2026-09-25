@@ -8,23 +8,40 @@
 namespace utils {
 struct db_guard {
   struct deleter {
-    void operator()(dmn::database* db) const noexcept {
-      if (db != nullptr) {
-        auto path = db->get_path();
-        delete db;
-        dmn::database::remove(path);
-      }
+    std::string path;
+
+    void operator()(dmn::database* db) const {
+      delete db;
+      dmn::database::remove(path);
     }
   };
 
   std::shared_ptr<dmn::database> value;
-  db_guard(dmn::database db) : value(new dmn::database(std::move(db)), deleter{}) {}
+
+  db_guard(dmn::database db)
+      : value(new dmn::database(std::move(db)), deleter{std::string{db.get_path()}}) {}
 
   auto operator*() -> dmn::database& { return *value; }
   auto operator->() -> dmn::database* { return &*value; }
 
   void release() noexcept { value.reset(); }
 };
+
+template <class F>
+void run_threaded(F&& fn) {
+  std::exception_ptr exception;
+  std::jthread([&] {
+    try {
+      std::invoke(std::forward<F>(fn));
+    } catch (...) {
+      exception = std::current_exception();
+    }
+  }).join();
+
+  if (exception) {
+    std::rethrow_exception(exception);
+  }
+}
 
 inline auto random_string(size_t len) -> std::string {
   constexpr static std::string_view RAND_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

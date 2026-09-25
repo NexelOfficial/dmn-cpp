@@ -2,6 +2,7 @@
 
 #include <domino/global.h>
 
+#include "dmn/detail/thread_context.hpp"
 #include "dmn/error.hpp"
 
 using dmn::detail::session;
@@ -13,6 +14,12 @@ session::session() {
 }
 
 session::~session() { NotesTerm(); }
+
+auto session::instance() -> const session& {
+  const static session s;
+  const static detail::thread_context ctx{};
+  return s;
+}
 
 thread::thread() {
   const dmn::status result = NotesInitThread();

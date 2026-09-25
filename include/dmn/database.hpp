@@ -30,6 +30,11 @@ constexpr static size_t DEFAULT_QUERY_AMT = 0xF;
 class database : protected detail::runtime {
  public:
   using handle_t = detail::dhandle_t;
+  struct state {
+    dmn::lmbcs path;
+    std::optional<dmn::acl::names> names;
+  };
+
   database() = delete;
 
   /// Create a database.
@@ -113,15 +118,12 @@ class database : protected detail::runtime {
   /// \return Database path using forward slash separators.
   [[nodiscard]] auto get_path() const -> std::string;
 
-  [[nodiscard]] auto try_get_handle() const noexcept -> std::optional<handle_t> {
-    return hdl_->try_get();
-  }
-  [[nodiscard]] auto get_handle() const -> handle_t { return hdl_ ? hdl_->get() : handle_t{}; }
+  [[nodiscard]] auto get_handle() const -> handle_t;
 
  private:
-  using managed_handle_t = detail::uhandle<handle_t>;
-  std::shared_ptr<managed_handle_t> hdl_;
+  std::shared_ptr<state> state_;
+  database(state st) : state_(std::make_shared<state>(std::move(st))) {};
 
-  database(handle_t handle);
+  [[nodiscard]] auto open_impl() const -> std::optional<handle_t>;
 };
 }  // namespace dmn

@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "dmn/database.hpp"
+#include "dmn/detail/thread_context.hpp"
 #include "dmn/object.hpp"
 #include "dmn/error.hpp"
 #include "dmn/unid.hpp"
@@ -46,11 +47,11 @@ auto create_temp_attachment() -> fs::path {
 TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   auto [db, name] = utils::random_database();
   REQUIRE(db->get_path().find(name) != std::string::npos);
-  REQUIRE(db->try_get_handle().has_value());
+  REQUIRE(db->get_handle());
 
   auto primary = db->create_note();
   REQUIRE(primary.info<dmn::info::note_id>() == dmn::note_id{});
-  REQUIRE(primary.try_get_handle().has_value());
+  REQUIRE(primary.get_handle());
   REQUIRE(primary.get_database().get_path().find(name) != std::string::npos);
 
   const std::string subject = utils::random_small_string() + "UTF-8: 🐶";
@@ -193,7 +194,22 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   REQUIRE(copied_tags.has_value());
   REQUIRE(copied_tags.value().size() == 3);
 
-  const std::jthread t([&]() { REQUIRE_THROWS_AS(primary.get_handle(), dmn::thread_error); });
+  auto unsaved_note = db->create_note();
+  utils::run_threaded([&]() {
+    REQUIRE_THROWS_AS(primary.get_handle(), dmn::thread_error);
+    const dmn::detail::thread_context ctx{};
+
+    REQUIRE_THROWS_AS(unsaved_note.get_handle(), dmn::thread_access_error);
+    REQUIRE(primary.get_handle());
+    REQUIRE(primary.get_database().get_handle());
+
+    const auto threaded_subject = copy.get<std::string>("Subject");
+    const auto threaded_tags = copy.get<dmn::list>("Tags");
+    REQUIRE(threaded_subject.has_value());
+    REQUIRE(threaded_subject.value() == replacement_subject);
+    REQUIRE(threaded_tags.has_value());
+    REQUIRE(threaded_tags.value().size() == 3);
+  });
 
   REQUIRE_NOTHROW(primary.remove(true));
   REQUIRE_FALSE(db->get_note(original_noteid).has_value());

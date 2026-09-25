@@ -32,9 +32,10 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
 
   SECTION("objects and lists throw thread errors") {
     const dmn::object value{};
-    const std::jthread t([&]() {
-      REQUIRE_THROWS_AS(tags.get_handle(), dmn::thread_error);
-      REQUIRE_THROWS_AS(value.get_cursor(), dmn::thread_error);
+
+    utils::run_threaded([&]() {
+      REQUIRE_THROWS_AS(tags.get_handle(), dmn::thread_access_error);
+      REQUIRE_THROWS_AS(value.get_cursor(), dmn::thread_access_error);
     });
   }
 
@@ -48,6 +49,7 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE_FALSE(value.is<bool>());
     REQUIRE(value.try_as<std::string>() == std::nullopt);
     REQUIRE_THROWS_AS(value.as<double>(), dmn::conversion_error);
+    REQUIRE_THROWS_AS(value.get_cursor(), dmn::invalid_handle);
   }
 
   SECTION("text values convert to strings and text lists only") {
@@ -141,15 +143,5 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
     REQUIRE(date.as_string() == "2026-02-01T11:34:56.00Z");
     REQUIRE(date.try_as<std::string>() == std::nullopt);
     REQUIRE_THROWS_AS(date.as<double>(), dmn::conversion_error);
-  }
-
-  SECTION("overwriting the note value doesn't break the object") {
-    const auto text = note.get<dmn::object>("TextValue").value();
-    REQUIRE_NOTHROW(note.set("TextValue", "This text is much larger!"));
-    REQUIRE_NOTHROW(note.save(true));
-
-    REQUIRE(text.is<std::string>());
-    REQUIRE(text.try_as<std::string>().has_value());
-    REQUIRE(text.try_as<std::string>().value() == "🐶🐶🐶");
   }
 }

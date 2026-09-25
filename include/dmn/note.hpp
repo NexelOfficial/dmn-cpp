@@ -30,6 +30,11 @@ class note : protected detail::runtime {
  public:
   using object_map_t = std::unordered_map<std::string, dmn::object>;
   using handle_t = detail::dhandle_t;
+  struct state {
+    dmn::database db;
+    dmn::note_id note_id;
+    std::optional<detail::uhandle<handle_t>> hdl;
+  };
 
   note() = delete;
 
@@ -41,10 +46,9 @@ class note : protected detail::runtime {
 
   /// Copy this note to another database.
   ///
-  /// \param db Target database.
+  /// \param other Target database.
   /// \return Copy of the note in the target database.
-  /// \throws dmn::runtime_error If the new note doesn't have a note id.
-  [[nodiscard]] auto copy_to_database(const dmn::database& db) const -> std::optional<note>;
+  [[nodiscard]] auto copy_to_database(dmn::database other) const -> std::optional<note>;
 
   /// Get the type of an item.
   ///
@@ -148,41 +152,27 @@ class note : protected detail::runtime {
     }
   }
 
-  [[nodiscard]] auto get_database() const -> const dmn::database& { return db_; }
+  [[nodiscard]] auto get_database() const -> const dmn::database& { return state_->db; }
 
-  [[nodiscard]] auto try_get_handle() const noexcept -> std::optional<handle_t> {
-    return hdl_->try_get();
-  }
-
-  [[nodiscard]] auto get_handle() const -> handle_t { return hdl_ ? hdl_->get() : handle_t{}; }
+  [[nodiscard]] auto get_handle() const -> handle_t;
 
  private:
-  dmn::database db_;
+  std::shared_ptr<state> state_;
+  note(state st) : state_(std::make_shared<state>(std::move(st))) {};
 
-  using managed_handle_t = detail::uhandle<handle_t>;
-  std::shared_ptr<managed_handle_t> hdl_;
-
-  note(dmn::database db, handle_t handle);
-
-  /// Internal implementation used by `dmn::database`.
+  [[nodiscard]] auto open_impl() const -> std::optional<handle_t>;
   static auto open(dmn::database db, dmn::unid unid) -> std::optional<note>;
-  /// Internal implementation used by `dmn::database`.
-  static auto open(dmn::database db, dmn::note_id noteid) -> std::optional<note>;
-  /// Internal implementation used by `dmn::database`.
+  static auto open(dmn::database db, dmn::note_id note_id) -> std::optional<note>;
   static auto create(dmn::database db) -> note;
 
-  /// Internal implementation used by `dmn::note::get_info()`.
   void get_info_impl(dmn::info key, void* out) const;
 
-  /// Internal implementation used by `dmn::note::get()`.
   [[nodiscard]] auto get_impl(dmn::lmbcs_view key) const -> std::optional<dmn::object>;
 
-  /// Internal implementation used by `dmn::note::set()`.
   void append_impl(
     std::string_view key, dmn::type type, std::span<const std::byte> buffer, uint16_t flags
   ) const;
 
-  /// Internal implementation used by `dmn::note::set()`.
   void modify_impl(
     std::string_view key, dmn::type type, std::span<const std::byte> buffer, uint16_t flags
   ) const;

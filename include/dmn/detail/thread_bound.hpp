@@ -46,8 +46,8 @@ class thread_bound {
 
  private:
   void check_thread() const {
-    if (owner_ != std::this_thread::get_id()) {
-      throw dmn::thread_error("Object accessed from non-owning thread");
+    if (!is_owner_thread()) {
+      throw dmn::thread_access_error("Object accessed from non-owning thread");
     }
   }
 

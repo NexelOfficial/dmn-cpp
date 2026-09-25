@@ -53,6 +53,10 @@ struct thread_error : error {
   using error::error;
 };
 
+struct thread_access_error : thread_error {
+  using thread_error::thread_error;
+};
+
 struct invalid_handle : error {
   using error::error;
 };

@@ -9,8 +9,10 @@
 #include <utility>
 #include <random>
 
+#include "dmn/detail/thread_context.hpp"
 #include "dmn/object.hpp"
 #include "dmn/error.hpp"
+#include "dmn/type.hpp"
 #include "dmn/unid.hpp"
 
 using dmn::note;
@@ -38,33 +40,39 @@ auto get_flags(size_t size) -> uint16_t {
 }
 }  // namespace
 
-note::note(dmn::database db, handle_t handle)
-    : hdl_(std::make_shared<managed_handle_t>(handle, NSFNoteClose)), db_(std::move(db)) {}
+auto note::open_impl() const -> std::optional<handle_t> {
+  auto& store = detail::thread_context::current().get<dmn::note>();
+  store.remove_stale();
 
-auto note::open(dmn::database db, dmn::note_id noteid) -> std::optional<note> {
   handle_t handle = {};
-  const dmn::status result = NSFNoteOpen(db.get_handle(), noteid.value, 0, &handle);
+  const dmn::status result =
+    NSFNoteOpen(state_->db.get_handle(), state_->note_id.value, 0, &handle);
   if (result.is_not_found()) {
     return std::nullopt;
   }
   result.throw_if_error("Failed to open note");
 
-  return note(std::move(db), handle);
+  detail::uhandle<handle_t> managed{handle, NSFNoteClose};
+  return store.insert(state_, std::move(managed)).handle.get();
+}
+
+auto note::open(dmn::database db, dmn::note_id note_id) -> std::optional<note> {
+  note nt({.db = std::move(db), .note_id = note_id});
+  if (!nt.open_impl()) {
+    return std::nullopt;
+  }
+  
+  return {std::move(nt)};
 }
 
 auto note::open(dmn::database db, dmn::unid unid) -> std::optional<note> {
-  // Open note with it's handle
   handle_t handle = {};
   const dmn::status result = NSFNoteOpenByUNID(db.get_handle(), unid.as_raw_unid(), 0, &handle);
-  if (result.is_not_found()) {
-    return std::nullopt;
-  }
   result.throw_if_error("Failed to open note");
 
-  dmn::note_id noteid{};
-  NSFNoteGetInfo(handle, _NOTE_ID, noteid.data());
-
-  return note(std::move(db), handle);
+  dmn::note_id note_id{};
+  NSFNoteGetInfo(handle, _NOTE_ID, note_id.data());
+  return open(std::move(db), note_id);
 }
 
 auto note::create(dmn::database db) -> note {
@@ -75,7 +83,8 @@ auto note::create(dmn::database db) -> note {
   uint16_t note_class = NOTE_CLASS_DOCUMENT;
   NSFNoteSetInfo(handle, _NOTE_CLASS, &note_class);
 
-  return {std::move(db), handle};
+  detail::uhandle<handle_t> managed{handle, NSFNoteClose};
+  return note({.db = std::move(db), .hdl = std::move(managed)});
 }
 
 auto note::has(std::string_view key) const -> bool {
@@ -83,19 +92,15 @@ auto note::has(std::string_view key) const -> bool {
   return NSFItemIsPresent(get_handle(), converted.c_str(), converted.size());
 }
 
-auto note::copy_to_database(const dmn::database& db) const -> std::optional<note> {
-  dmn::note_id new_noteid{};
+auto note::copy_to_database(dmn::database other) const -> std::optional<note> {
+  dmn::note_id new_note_id{};
   const dmn::status result = NSFDbCopyNote(
-    db_.get_handle(), nullptr, nullptr, info<dmn::info::note_id>().value, db.get_handle(), nullptr,
-    nullptr, new_noteid.data(), nullptr
+    state_->db.get_handle(), nullptr, nullptr, info<dmn::info::note_id>().value, other.get_handle(),
+    nullptr, nullptr, new_note_id.data(), nullptr
   );
 
   result.throw_if_error("Failed to copy note");
-  if (new_noteid == dmn::note_id{}) {
-    throw dmn::runtime_error("New note copy has empty note_id");
-  }
-
-  return note::open(db, new_noteid);
+  return open(std::move(other), new_note_id);
 }
 
 void note::embed_element(std::string_view name, const std::filesystem::path& path) const {
@@ -154,11 +159,17 @@ void note::sign() const {
 void note::save(bool force) const {
   const dmn::status result = NSFNoteUpdate(get_handle(), force ? UPDATE_FORCE : 0);
   result.throw_if_error("Failed to save note");
+  state_->note_id = info<info::note_id>();
+  state_->hdl = std::nullopt;
 }
 
 void note::remove(bool force) const {
-  const dmn::status result =
-    NSFNoteDelete(db_.get_handle(), info<dmn::info::note_id>().value, force ? UPDATE_FORCE : 0);
+  auto& ctx = detail::thread_context::current();
+  ctx.get<dmn::note>().remove_stale();
+
+  const dmn::status result = NSFNoteDelete(
+    state_->db.get_handle(), info<dmn::info::note_id>().value, force ? UPDATE_FORCE : 0
+  );
   result.throw_if_error("Failed to remove note");
 }
 
@@ -260,4 +271,26 @@ void note::modify_impl(
   const dmn::status result =
     NSFItemModifyValue(get_handle(), bid, flags, data_type, buffer.data(), buffer.size());
   result.throw_if_error("Failed to modify note item value");
+}
+
+auto note::get_handle() const -> handle_t {
+  if (state_->hdl) {
+    return state_->hdl->get();
+  }
+
+  auto& store = detail::thread_context::current().get<dmn::note>();
+  store.remove_stale();
+
+  auto* entry = store.find(state_);
+  if (entry != nullptr) {
+    return entry->handle.get();
+  }
+
+  handle_t handle = {};
+  const dmn::status result =
+    NSFNoteOpen(state_->db.get_handle(), state_->note_id.value, 0, &handle);
+  result.throw_if_error("Failed to open note");
+
+  detail::uhandle<handle_t> managed{handle, NSFNoteClose};
+  return store.insert(state_, std::move(managed)).handle.get();
 }
