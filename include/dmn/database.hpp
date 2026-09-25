@@ -56,7 +56,7 @@ class database : protected detail::runtime {
   /// \param names Optional names list used when opening the database.
   /// \return Opened database if found; otherwise an empty result indicating the database does not
   /// exist.
-  static auto open(std::string_view file, std::optional<dmn::acl::names> = std::nullopt)
+  static auto open(std::string_view file, std::optional<dmn::acl::names> names = std::nullopt)
     -> std::optional<database>;
 
   /// Read this databases ACL.

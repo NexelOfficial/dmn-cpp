@@ -121,11 +121,11 @@ class note : protected detail::runtime {
       return std::nullopt;
     }
 
-    dmn::item_value value{*this, key};
     if constexpr (detail::has_object_convert<T>) {
+      const dmn::item_value value{*this, key};
       return value.try_as<T>();
     } else if constexpr (std::is_same_v<T, dmn::item_value>) {
-      return value;
+      return dmn::item_value{*this, key};
     }
     return std::nullopt;
   }

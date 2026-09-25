@@ -26,7 +26,7 @@ class thread_handle_store {
     std::erase_if(handles_, [](const auto& item) { return item.second.state.expired(); });
   }
 
-  [[nodiscard]] auto find(std::shared_ptr<typename T::state> state) -> entry_type* {
+  [[nodiscard]] auto find(const std::shared_ptr<typename T::state>& state) -> entry_type* {
     const auto it = handles_.find(state.get());
     if (it == handles_.end()) {
       return nullptr;
@@ -41,7 +41,7 @@ class thread_handle_store {
   }
 
   auto insert(
-    std::shared_ptr<typename T::state> state, detail::uhandle<typename T::handle_t> handle
+    const std::shared_ptr<typename T::state>& state, detail::uhandle<typename T::handle_t> handle
   ) -> entry_type& {
     auto [it, _] = handles_.try_emplace(state.get(), state, std::move(handle));
     return it->second;
@@ -53,12 +53,17 @@ class thread_handle_store {
 
 class thread_context {
   struct storage_base {
+    storage_base() = default;
     virtual ~storage_base() = default;
+    storage_base(const storage_base&) = delete;
+    auto operator=(const storage_base&) = delete;
+    storage_base(storage_base&&) = delete;
+    auto operator=(storage_base&&) = delete;
   };
 
   template <typename T>
   struct storage final : storage_base {
-    T value;
+    thread_handle_store<T> value;
   };
 
  public:
@@ -74,14 +79,13 @@ class thread_context {
 
   template <typename T>
   [[nodiscard]] auto get() -> thread_handle_store<T>& {
-    using storage_t = storage<thread_handle_store<T>>;
-    const auto key = std::type_index(typeid(thread_handle_store<T>));
+    const auto key = std::type_index(typeid(T));
     auto [it, inserted] = storage_.try_emplace(key);
     if (inserted) {
-      it->second = std::make_unique<storage_t>();
+      it->second = std::make_unique<storage<T>>();
     }
 
-    return static_cast<storage_t&>(*it->second).value;
+    return static_cast<storage<T>&>(*it->second).value;
   }
 
  private:

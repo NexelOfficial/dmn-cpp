@@ -47,7 +47,7 @@ struct view_table_format2 {
 ///
 /// \throws dmn::invalid_handle If an underlying handle is empty.
 /// \throws dmn::native_error In case of a lower level failure.
-class view : private detail::runtime {
+class view : private detail::runtime {  // NOLINT(bugprone-exception-escape)
  public:
   /// Create a view design element.
   ///
@@ -71,8 +71,8 @@ class view : private detail::runtime {
  private:
   dmn::note note_;
   dmn::formula selection_;
-  view_table_format table_format_{};
-  view_table_format2 table_format2_{};
+  view_table_format table_format_;
+  view_table_format2 table_format2_;
   std::deque<design::column> columns_;
 
   view(dmn::note note);

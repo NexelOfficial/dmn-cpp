@@ -83,7 +83,7 @@ class list : protected detail::runtime {
   void clear();
 
   /// Release the list handle.
-  void release() noexcept { hdl_.release(); }
+  void release() { hdl_.release(); }
 
   [[nodiscard]] auto begin() const -> const_iterator;
   [[nodiscard]] auto end() const -> const_iterator;
