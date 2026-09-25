@@ -1,7 +1,8 @@
-#include "dmn/object.hpp"
+#include "dmn/value.hpp"
 
 #include <domino/global.h>
 #include <domino/nsfnote.h>
+#include <domino/osmem.h>
 #include <domino/misc.h>
 
 #include <cstring>
@@ -9,21 +10,16 @@
 #include "dmn/detail/locker.hpp"
 #include "dmn/time_date.hpp"
 #include "dmn/error.hpp"
+#include "dmn/note.hpp"
 
-using dmn::object;
+using dmn::item_value;
+using dmn::value;
+using dmn::value_impl;
 
-object::object(detail::locker locker) : bid_(locker.get_block_id()), size_(locker.size()) {
-  if (locker.get_ownership() != detail::ownership::take) {
-    throw dmn::invalid_argument("Locker must own memory in order to create an object");
-  }
+auto value_impl::empty() const noexcept -> bool { return size() <= 2; }
 
-  owner_ = std::make_shared<detail::locker>(std::move(locker));
-}
-
-auto object::empty() const noexcept -> bool { return size_ <= 2; }
-
-auto object::get_type() const -> dmn::type {
-  if (size_ < 2 || *bid_ == detail::block_id{}) {
+auto value_impl::get_type() const -> dmn::type {
+  if (size() < 2) {
     return dmn::type::invalid_or_unknown;
   }
 
@@ -31,16 +27,16 @@ auto object::get_type() const -> dmn::type {
   return obj.read<dmn::type>();
 }
 
-auto object::as_string() const -> std::optional<std::string> {
-  if (size_ < 2 || *bid_ == detail::block_id{}) {
+auto value_impl::as_string() const -> std::optional<std::string> {
+  if (size() < 2) {
     return std::nullopt;
   }
 
   auto [typ, obj] = data_pair();
-  const size_t data_size = size_ - sizeof(typ);
+  const size_t data_size = size() - sizeof(typ);
 
   if (typ == dmn::type::text) {
-    // Use pointer with dmn::lmbcs_view instead of obj.read() to prevent double allocation
+    // Use pointer with dmn::lmbcs_view instead of read to prevent double allocation
     const dmn::lmbcs_view value(obj.get_pointer<dmn::lmbcs::char_t>(), data_size);
     return value.to_string();
   }
@@ -89,12 +85,35 @@ auto object::as_string() const -> std::optional<std::string> {
   return std::nullopt;
 }
 
-auto object::get_cursor() const -> detail::locker {
-  return {bid_.get(), size_, detail::ownership::borrow};
-}
-
-auto object::data_pair() const -> std::pair<dmn::type, detail::locker> {
+auto value_impl::data_pair() const -> std::pair<dmn::type, detail::locker> {
   auto obj = get_cursor();
   const auto typ = obj.read<dmn::type>();
   return {typ, std::move(obj)};
+}
+
+value::value(detail::locker locker) : hdl_(OSMemFree) {
+  if (locker.get_ownership() != detail::ownership::take) {
+    throw dmn::invalid_argument("Locker must own memory in order to create an value");
+  }
+
+  size_ = locker.size();
+  hdl_.put(locker.release().pool);
+}
+
+item_value::item_value(dmn::note note, dmn::lmbcs item)
+    : note_(std::make_shared<dmn::note>(std::move(note))), item_(std::move(item)) {};
+
+auto item_value::get_info() const -> item_info {
+  item_info info{};
+  uint16_t item_type = 0;
+
+  auto* item_ptr = reinterpret_cast<BLOCKID*>(&info.item_bid);
+  auto* value_ptr = reinterpret_cast<BLOCKID*>(&info.value_bid);
+  auto* size_ptr = reinterpret_cast<DWORD*>(&info.value_size);
+
+  const dmn::status result = NSFItemInfo(
+    note_->get_handle(), item_.c_str(), item_.size(), item_ptr, &item_type, value_ptr, size_ptr
+  );
+  result.throw_if_error("Failed to obtain item information");
+  return info;
 }

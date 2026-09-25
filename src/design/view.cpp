@@ -120,7 +120,7 @@ void view::save() {
   note_.save(false);
 }
 
-auto view::build_view_format() -> dmn::object {
+auto view::build_view_format() -> dmn::value {
   size_t buffer_size =
     ods::size(ods::type::view_table_format) + ods::size(ods::type::view_table_format2);
 
@@ -185,7 +185,7 @@ auto view::build_view_format() -> dmn::object {
   return {std::move(locker)};
 }
 
-auto view::build_collation() const -> dmn::object {
+auto view::build_collation() const -> dmn::value {
   size_t item_names_size = 0;
   std::vector<const design::column*> sorted_cols;
   for (const auto& col : columns_) {

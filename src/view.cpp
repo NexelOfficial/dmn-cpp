@@ -83,8 +83,8 @@ void view::iterate_entries(
         // Copy memory to owned object
         const std::span buffer{entries_obj.get_pointer(), len};
         auto locker = detail::locker::allocate<std::byte>(buffer);
-        auto value = dmn::object{std::move(locker)};
-        current_entry.columns.emplace_back(value);
+        dmn::value val{std::move(locker)};
+        current_entry.columns.emplace_back(std::move(val));
 
         entries_obj.advance_offset(len);
       }
@@ -96,7 +96,7 @@ void view::iterate_entries(
         continue;
       }
 
-      func(std::move(*note), current_entry.columns);
+      func(std::move(*note), std::move(current_entry.columns));
     }
 
     if (remaining <= entries_length) {
@@ -154,8 +154,10 @@ void view::iterate(const query_options& opts, const function_t& func) const {
 
 auto view::get_entries(const query_options& opts) const -> std::vector<entry> {
   std::vector<entry> entries{};
-  iterate(opts, [&](const dmn::note& note, const std::vector<dmn::object>& columns) {
-    entries.push_back(entry{.noteid = note.info<dmn::info::note_id>(), .columns = columns});
+  iterate(opts, [&](const dmn::note& note, std::vector<dmn::value> columns) {
+    entries.push_back(
+      entry{.noteid = note.info<dmn::info::note_id>(), .columns = std::move(columns)}
+    );
   });
   return entries;
 }

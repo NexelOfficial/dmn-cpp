@@ -3,9 +3,7 @@
 #include <algorithm>
 #include <string>
 
-#include "dmn/detail/thread_context.hpp"
 #include "dmn/database.hpp"
-#include "dmn/error.hpp"
 #include "dmn/note.hpp"
 #include "dmn/dql.hpp"
 #include "utils.hpp"
@@ -58,9 +56,6 @@ TEST_CASE("a database can be used in threads", "[nsf][database]") {
   REQUIRE(main_handle);
 
   utils::run_threaded([&]() {
-    REQUIRE_THROWS_AS(db->get_handle(), dmn::thread_error);
-
-    const dmn::detail::thread_context ctx{};
     const auto handle = db->get_handle();
     REQUIRE(handle);
     REQUIRE(db->get_handle() == handle);
@@ -78,15 +73,6 @@ TEST_CASE("a database can be used in threads", "[nsf][database]") {
     REQUIRE(reopened);
     REQUIRE(reopened->get_handle());
     REQUIRE(reopened->info<dmn::info::note_id>() == noteid);
-  });
-
-  REQUIRE(db->get_handle() == main_handle);
-
-  utils::run_threaded([&]() {
-    REQUIRE_THROWS_AS(db->get_handle(), dmn::thread_error);
-
-    const dmn::detail::thread_context ctx{};
-    REQUIRE(db->get_handle());
   });
 
   REQUIRE(db->get_handle() == main_handle);

@@ -118,8 +118,8 @@ auto agent::set_code(dmn::lotusscript code) -> agent& {
   const auto cursor = code.get_cursor();
   lock.write(std::span{cursor.get_pointer(), cursor.size()});
 
-  const dmn::object obj{std::move(lock)};
-  note_.set(ASSIST_ACTION_ITEM, obj, dmn::item_flag::sign);
+  const dmn::value val{std::move(lock)};
+  note_.set(ASSIST_ACTION_ITEM, val, dmn::item_flag::sign);
   note_.set(
     ASSIST_TYPE_ITEM, std::to_underlying(design::language::lotusscript), dmn::item_flag::sign
   );
@@ -141,8 +141,8 @@ auto agent::set_code(dmn::formula code) -> agent& {
   const auto cursor = code.get_cursor();
   lock.write(std::span{cursor.get_pointer(), cursor.size()});
 
-  const dmn::object obj{std::move(lock)};
-  note_.set(ASSIST_ACTION_ITEM, obj, dmn::item_flag::sign);
+  const dmn::value val{std::move(lock)};
+  note_.set(ASSIST_ACTION_ITEM, val, dmn::item_flag::sign);
   note_.set(ASSIST_TYPE_ITEM, std::to_underlying(design::language::formula), dmn::item_flag::sign);
   note_.set(DESIGN_FLAGS, flags::from_language(design::language::formula));
   return *this;
@@ -184,8 +184,8 @@ void agent::set_action_ex() {
   auto lock = detail::locker::allocate(4);
   lock.write(dmn::type::lsobject);
 
-  const dmn::object obj{std::move(lock)};
-  note_.set(ASSIST_EXACTION_ITEM, obj, dmn::item_flag::sign);
+  const dmn::value val{std::move(lock)};
+  note_.set(ASSIST_EXACTION_ITEM, val, dmn::item_flag::sign);
 }
 
 void agent::set_run_info() {

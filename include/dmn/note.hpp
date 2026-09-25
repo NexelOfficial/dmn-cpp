@@ -13,8 +13,8 @@
 #include "dmn/detail/runtime.hpp"
 #include "dmn/detail/uhandle.hpp"
 #include "dmn/flags.hpp"
+#include "dmn/value.hpp"
 #include "dmn/lmbcs.hpp"
-#include "dmn/object.hpp"
 #include "dmn/type.hpp"
 #include "dmn/database.hpp"
 #include "dmn/unid.hpp"
@@ -26,9 +26,10 @@ class strlist;
 ///
 /// \throws dmn::invalid_handle If an underlying handle is empty.
 /// \throws dmn::native_error In case of a lower level failure.
+/// \note Thread-compatible when saved to disk, thread-affine otherwise.
 class note : protected detail::runtime {
  public:
-  using object_map_t = std::unordered_map<std::string, dmn::object>;
+  using value_map_t = std::unordered_map<std::string, dmn::item_value>;
   using handle_t = detail::dhandle_t;
   struct state {
     dmn::database db;
@@ -92,7 +93,7 @@ class note : protected detail::runtime {
   ///
   /// \param pattern Optional regex pattern to match keys to.
   /// \return Scan results that contain the item name and type.
-  [[nodiscard]] auto items(std::optional<std::regex> pattern) const -> object_map_t;
+  [[nodiscard]] auto items(std::optional<std::regex> pattern) const -> value_map_t;
 
   /// Set an item of the note.
   ///
@@ -114,17 +115,16 @@ class note : protected detail::runtime {
   /// \param key Item name to retrieve.
   /// \return Retrieved item, if available.
   template <typename T>
-    requires detail::has_object_convert<T> || std::is_same_v<T, dmn::object>
+    requires detail::has_object_convert<T> || std::is_same_v<T, dmn::item_value>
   [[nodiscard]] auto get(std::string_view key) const -> std::optional<T> {
-    const auto converted = dmn::lmbcs::from_string(key);
-    auto value = get_impl(converted);
-    if (!value) {
+    if (!has(key)) {
       return std::nullopt;
     }
 
+    dmn::item_value value{*this, key};
     if constexpr (detail::has_object_convert<T>) {
-      return value->try_as<T>();
-    } else if constexpr (std::is_same_v<T, dmn::object>) {
+      return value.try_as<T>();
+    } else if constexpr (std::is_same_v<T, dmn::item_value>) {
       return value;
     }
     return std::nullopt;
@@ -132,7 +132,7 @@ class note : protected detail::runtime {
 
   /// Get information about the note.
   ///
-  /// \return Retrieved information
+  /// \return Retrieved information.
   template <dmn::info Info>
   [[nodiscard]] auto info() const {
     if constexpr (Info == dmn::info::note_id) {
@@ -166,8 +166,6 @@ class note : protected detail::runtime {
   static auto create(dmn::database db) -> note;
 
   void get_info_impl(dmn::info key, void* out) const;
-
-  [[nodiscard]] auto get_impl(dmn::lmbcs_view key) const -> std::optional<dmn::object>;
 
   void append_impl(
     std::string_view key, dmn::type type, std::span<const std::byte> buffer, uint16_t flags

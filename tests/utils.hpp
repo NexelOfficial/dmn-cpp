@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dmn/database.hpp"
+#include "dmn/thread.hpp"
 
 #include <optional>
 #include <random>
@@ -30,7 +31,7 @@ struct db_guard {
 template <class F>
 void run_threaded(F&& fn) {
   std::exception_ptr exception;
-  std::jthread([&] {
+  dmn::thread([&] {
     try {
       std::invoke(std::forward<F>(fn));
     } catch (...) {

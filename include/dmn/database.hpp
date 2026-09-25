@@ -27,6 +27,7 @@ constexpr static size_t DEFAULT_QUERY_AMT = 0xF;
 ///
 /// \throws dmn::invalid_handle If an underlying handle is empty.
 /// \throws dmn::native_error In case of a lower level failure.
+/// \note Thread-safe if not opened using `dmn::acl::names`, thread-affine otherwise.
 class database : protected detail::runtime {
  public:
   using handle_t = detail::dhandle_t;

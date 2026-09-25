@@ -8,7 +8,7 @@
 
 #include "dmn/detail/runtime.hpp"
 #include "dmn/database.hpp"
-#include "dmn/object.hpp"
+#include "dmn/value.hpp"
 
 namespace dmn {
 class database;
@@ -23,7 +23,7 @@ class view : protected detail::runtime {
  public:
   struct entry {
     dmn::note_id noteid;
-    std::vector<dmn::object> columns;
+    std::vector<dmn::value> columns;
   };
 
   struct query_options {
@@ -35,7 +35,7 @@ class view : protected detail::runtime {
     uint32_t offset = 0;
   };
 
-  using function_t = std::function<void(dmn::note, const std::vector<dmn::object>&)>;
+  using function_t = std::function<void(dmn::note, std::vector<dmn::value>)>;
   using handle_t = unsigned short;
   view() = delete;
 

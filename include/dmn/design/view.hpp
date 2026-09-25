@@ -10,7 +10,7 @@
 #include "dmn/design/color.hpp"
 #include "dmn/formula.hpp"
 #include "dmn/note.hpp"
-#include "dmn/object.hpp"
+#include "dmn/value.hpp"
 
 namespace dmn {
 class database;
@@ -78,7 +78,7 @@ class view : private detail::runtime {
   view(dmn::note note);
 
   static auto open_impl(dmn::note note) -> view;
-  [[nodiscard]] auto build_view_format() -> dmn::object;
-  [[nodiscard]] auto build_collation() const -> dmn::object;
+  [[nodiscard]] auto build_view_format() -> dmn::value;
+  [[nodiscard]] auto build_collation() const -> dmn::value;
 };
 }  // namespace dmn::design

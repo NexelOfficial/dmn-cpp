@@ -10,7 +10,7 @@ auto object_value<std::string>::convert(detail::cursor& cs) -> std::optional<std
     return std::nullopt;
   }
 
-  // Use pointer with dmn::lmbcs_view instead of obj.read() to prevent double allocation
+  // Use pointer with dmn::lmbcs_view to prevent double allocation
   auto* ptr = cs.get_pointer<dmn::lmbcs::char_t>();
   const dmn::lmbcs_view value(ptr, cs.size() - sizeof(dmn::type));
   return value.to_string();

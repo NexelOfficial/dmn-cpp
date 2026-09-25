@@ -1,6 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "dmn/detail/thread_context.hpp"
 #include "dmn/design/agent.hpp"
 #include "dmn/lotusscript.hpp"
 #include "dmn/formula.hpp"
@@ -42,6 +41,12 @@ auto setup_modify_agent(const dmn::database& db) -> design::agent {
   REQUIRE(design_agent.get_title() == title);
   REQUIRE(design_agent.get_comment().empty());
   REQUIRE_NOTHROW(design_agent.save());
+
+  utils::run_threaded([&]() {
+    REQUIRE_NOTHROW(design_agent.save());
+    REQUIRE_FALSE(design_agent.get_title().empty());
+  });
+
   return design_agent;
 }
 
@@ -82,11 +87,6 @@ TEST_CASE("Formula agent can be created and ran", "[nsf]") {
   design_agent.set_code(std::move(code));
   REQUIRE_NOTHROW(design_agent.save());
 
-  utils::run_threaded([&]() {
-    const dmn::detail::thread_context ctx{};
-    REQUIRE_NOTHROW(design_agent.save());
-  });
-
   check_modify_agent(*db, design_agent.get_title());
 }
 
@@ -97,11 +97,6 @@ TEST_CASE("LotusScript agent can be created and ran", "[nsf]") {
   auto code = dmn::lotusscript{LOTUSSCRIPT_CODE};
   design_agent.set_code(std::move(code));
   REQUIRE_NOTHROW(design_agent.save());
-
-  utils::run_threaded([&]() {
-    const dmn::detail::thread_context ctx{};
-    REQUIRE_NOTHROW(design_agent.save());
-  });
 
   check_modify_agent(*db, design_agent.get_title());
 }

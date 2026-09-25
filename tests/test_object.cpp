@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-#include "dmn/object.hpp"
+#include "dmn/value.hpp"
 #include "dmn/error.hpp"
 #include "dmn/list.hpp"
 #include "dmn/type.hpp"
@@ -29,31 +29,23 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   note.set("TrueValue", true);
   note.set("DateValue", now_td);
   note.set("ListValue", tags);
+  note.save(false);
 
-  SECTION("objects and lists throw thread errors") {
-    const dmn::object value{};
+  SECTION("item values work in threads") {
+    const auto text = note.get<dmn::item_value>("TextValue").value();
 
     utils::run_threaded([&]() {
       REQUIRE_THROWS_AS(tags.get_handle(), dmn::thread_access_error);
-      REQUIRE_THROWS_AS(value.get_cursor(), dmn::thread_access_error);
+      REQUIRE_FALSE(text.empty());
+      REQUIRE(text.is<std::string>());
+      REQUIRE(text.get_type() == dmn::type::text);
+      REQUIRE(text.try_as<std::string>().has_value());
+      REQUIRE(text.try_as<std::string>().value() == "🐶🐶🐶");
     });
   }
 
-  SECTION("default values are empty") {
-    const dmn::object value{};
-
-    REQUIRE(value.empty());
-    REQUIRE_FALSE(value.is<std::string>());
-    REQUIRE_FALSE(value.is<double>());
-    REQUIRE_FALSE(value.is<dmn::list>());
-    REQUIRE_FALSE(value.is<bool>());
-    REQUIRE(value.try_as<std::string>() == std::nullopt);
-    REQUIRE_THROWS_AS(value.as<double>(), dmn::conversion_error);
-    REQUIRE_THROWS_AS(value.get_cursor(), dmn::invalid_handle);
-  }
-
   SECTION("text values convert to strings and text lists only") {
-    const auto text = note.get<dmn::object>("TextValue").value();
+    const auto text = note.get<dmn::item_value>("TextValue").value();
     REQUIRE_NOTHROW(note.set("TextValueCopy", text));
     REQUIRE(note.get_type("TextValueCopy") == dmn::type::text);
 
@@ -74,7 +66,7 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   }
 
   SECTION("number values convert to multiple numbers") {
-    const auto number = note.get<dmn::object>("NumericValue").value();
+    const auto number = note.get<dmn::item_value>("NumericValue").value();
     REQUIRE_NOTHROW(note.set("NumericValueCopy", number));
     REQUIRE(note.get_type("NumericValueCopy") == dmn::type::number);
 
@@ -92,9 +84,9 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   }
 
   SECTION("boolean conversion works for numbers") {
-    const auto zero = note.get<dmn::object>("FalseValue").value();
-    const auto one = note.get<dmn::object>("TrueValue").value();
-    const auto number = note.get<dmn::object>("NumericValue").value();
+    const auto zero = note.get<dmn::item_value>("FalseValue").value();
+    const auto one = note.get<dmn::item_value>("TrueValue").value();
+    const auto number = note.get<dmn::item_value>("NumericValue").value();
 
     REQUIRE_FALSE(zero.empty());
     REQUIRE(zero.is<bool>());
@@ -114,7 +106,7 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   }
 
   SECTION("dmn::list conversion only work for text lists") {
-    const auto list_value = note.get<dmn::object>("ListValue").value();
+    const auto list_value = note.get<dmn::item_value>("ListValue").value();
     REQUIRE_NOTHROW(note.set("ListValueCopy", list_value));
     REQUIRE(note.get_type("ListValueCopy") == dmn::type::text_list);
 
@@ -133,7 +125,7 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   }
 
   SECTION("dmn::time_date conversion only works for time date") {
-    const auto date = note.get<dmn::object>("DateValue").value();
+    const auto date = note.get<dmn::item_value>("DateValue").value();
     REQUIRE_NOTHROW(note.set("DateValueCopy", date));
     REQUIRE(note.get_type("DateValueCopy") == dmn::type::time);
 
