@@ -8,6 +8,10 @@
 #include "dmn/note.hpp"
 
 namespace dmn::detail {
+/// Attached Object that holds memory and belongs to a database.
+///
+/// \throws dmn::invalid_handle If the underlying handle is empty.
+/// \throws dmn::native_error In case of a lower level failure.
 class attached_object : private detail::runtime {
  public:
   enum class type : uint16_t {
@@ -25,34 +29,27 @@ class attached_object : private detail::runtime {
   /// \param db The database to allocate in.
   /// \param object_type Type of the object.
   /// \param size Size of the object.
-  /// \throws dmn::native_error If the allocation failed.
   attached_object(dmn::database db, type object_type, size_t size);
 
   /// Append the object to a note item.
   ///
   /// \param note The note to append to.
   /// \param key Key to append the object to.
-  /// \throws dmn::native_error If the appending failed.
   void append_to_note(const dmn::note& note, std::string_view key) const;
 
   /// Reallocate the object memory to resize it.
   ///
   /// \param size New size of the object.
-  /// \throws dmn::native_error If the reallocation failed.
   /// \note The underlying handle will remain the same.
   void reallocate(size_t size);
 
   /// Write data to the object.
   ///
   /// \param locker Locker holding data to write.
-  /// \throws dmn::native_error If the writing failed.
   /// \throws dmn::invalid_argument If the provided locker does not own the memory.
   void write(detail::locker locker);
 
   /// Get the size of the object memory.
-  ///
-  /// \param object_type Type of the object.
-  /// \throws dmn::native_error If obtaining the size failed.
   [[nodiscard]] auto size() const -> size_t;
 
   /// Release the underlying handle.

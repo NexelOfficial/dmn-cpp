@@ -24,6 +24,9 @@ TEST_CASE("a note can be persisted and reopened", "[nsf][database]") {
   REQUIRE(noteid.value != 0);
   REQUIRE(unid.to_string().size() == 32);
 
+  auto non_existent = dmn::database::open("Empty.nsf");
+  REQUIRE_FALSE(non_existent.has_value());
+
   SECTION("reopen by note ID") {
     const auto reopened = db->get_note(noteid);
 
@@ -44,6 +47,35 @@ TEST_CASE("a note can be persisted and reopened", "[nsf][database]") {
     REQUIRE(reopened->info<dmn::info::note_id>() == noteid);
     REQUIRE(reopened->info<dmn::info::unid>() == unid);
   }
+}
+
+TEST_CASE("a database can be used in threads", "[nsf][database]") {
+  auto [db, _] = utils::random_database();
+
+  const auto main_handle = db->get_handle();
+  REQUIRE(main_handle);
+
+  utils::run_threaded([&]() {
+    const auto handle = db->get_handle();
+    REQUIRE(handle);
+    REQUIRE(db->get_handle() == handle);
+
+    const auto copy = *db;
+    REQUIRE(copy.get_handle() == handle);
+
+    const auto note = db->create_note();
+    note.set("Foo", "Bar");
+    note.save(true);
+
+    const auto noteid = note.info<dmn::info::note_id>();
+
+    const auto reopened = db->get_note(noteid);
+    REQUIRE(reopened);
+    REQUIRE(reopened->get_handle());
+    REQUIRE(reopened->info<dmn::info::note_id>() == noteid);
+  });
+
+  REQUIRE(db->get_handle() == main_handle);
 }
 
 TEST_CASE("a persisted note can be found with DQL", "[nsf][database]") {

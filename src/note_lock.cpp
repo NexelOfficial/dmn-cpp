@@ -10,6 +10,16 @@
 
 using dmn::note_lock;
 
+namespace {
+auto get_db_handle(const dmn::database& db) noexcept -> std::optional<dmn::database::handle_t> {
+  try {
+    return db.get_handle();
+  } catch (...) {
+    return std::nullopt;
+  }
+}
+}  // namespace
+
 auto note_lock::acquire(dmn::database db, dmn::note_id noteid) -> note_lock {
   const dmn::status result = lock_note(db.get_handle(), noteid);
   if (result.is_locked()) {
@@ -22,11 +32,7 @@ auto note_lock::acquire(dmn::database db, dmn::note_id noteid) -> note_lock {
 
 auto note_lock::try_acquire(dmn::database db, dmn::note_id noteid) noexcept
   -> std::optional<note_lock> {
-  auto db_handle = db.try_get_handle();
-  if (!db_handle) {
-    return std::nullopt;
-  }
-
+  const auto db_handle = get_db_handle(db);
   const dmn::status result = lock_note(*db_handle, noteid);
   if (result.is_error()) {
     return std::nullopt;
@@ -40,11 +46,7 @@ auto note_lock::try_unlock() noexcept -> bool {
     return true;
   }
 
-  auto db_handle = db_.try_get_handle();
-  if (!db_handle) {
-    return false;
-  }
-
+  const auto db_handle = get_db_handle(db_);
   const dmn::status result = NSFDbNoteUnlock(*db_handle, noteid_.value, NOTE_LOCK_HARD);
   if (result.is_error()) {
     return false;

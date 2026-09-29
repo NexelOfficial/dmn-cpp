@@ -11,6 +11,8 @@
 #include <optional>
 
 #include "dmn/detail/locker.hpp"
+#include "dmn/detail/thread_context.hpp"
+#include "dmn/detail/uhandle.hpp"
 #include "dmn/acl/manager.hpp"
 #include "dmn/acl/access.hpp"
 #include "dmn/acl/names.hpp"
@@ -26,46 +28,48 @@ static_assert(sizeof(database::handle_t) == sizeof(DBHANDLE));
 
 constexpr size_t MAX_DQL_ENTRIES = 0xffff;
 
-database::database(handle_t handle)
-    : hdl_(std::make_shared<managed_handle_t>(handle, NSFDbClose)) {}
+auto database::open_impl() const -> std::optional<handle_t> {
+  auto& store = detail::thread_context::current().get<dmn::database>();
+  store.remove_stale();
 
-auto database::create(std::string_view file) -> std::optional<database> {
-  const auto converted = dmn::lmbcs::from_string(file);
-  const dmn::status result = NSFDbCreate(converted.c_str(), DBCLASS_NOTEFILE, FALSE);
-  result.throw_if_error("Failed to create database");
-  return database::open(file, {});
-}
+  const auto names_hdl = state_->names ? state_->names->get_handle() : detail::dhandle_t{};
 
-void database::remove(std::string_view file) {
-  const auto converted = dmn::lmbcs::from_string(file);
-  const dmn::status result = NSFDbDelete(converted.c_str());
-  result.throw_if_error("Failed to remove database");
-}
-
-auto database::open(std::string_view file) -> std::optional<database> {
-  return database::open(file, {});
-}
-
-auto database::open(std::string_view file, const dmn::acl::names& names)
-  -> std::optional<database> {
-  // Allocate memory on server for names
-  std::optional<detail::locker> names_obj = std::nullopt;
-  if (names.get_count() > 0) {
-    names_obj.emplace(detail::locker::allocate<std::byte>(names.buffer()));
-  }
-  const detail::dhandle_t names_hdl = names_obj ? names_obj->get_handle() : NULLHANDLE;
-
-  handle_t handle = {};
-  const auto converted = dmn::lmbcs::from_string(file);
+  handle_t handle{};
   const dmn::status result =
-    NSFDbOpenExtended(converted.c_str(), 0, names_hdl, nullptr, &handle, nullptr, nullptr);
-
+    NSFDbOpenExtended(state_->path.c_str(), 0, names_hdl, nullptr, &handle, nullptr, nullptr);
   if (result.is_not_found()) {
     return std::nullopt;
   }
   result.throw_if_error("Failed to open database");
 
-  return database(handle);
+  detail::uhandle<handle_t> managed{handle, NSFDbClose};
+  return store.insert(state_, std::move(managed)).handle.get();
+}
+
+auto database::create(std::string_view file) -> std::optional<database> {
+  const auto converted = dmn::lmbcs::from_string(file);
+  const dmn::status result = NSFDbCreate(converted.c_str(), DBCLASS_NOTEFILE, FALSE);
+  result.throw_if_error("Failed to create database");
+  return database::open(file);
+}
+
+void database::remove(std::string_view file) {
+  auto& ctx = detail::thread_context::current();
+  ctx.get<dmn::database>().remove_stale();
+
+  const auto converted = dmn::lmbcs::from_string(file);
+  const dmn::status result = NSFDbDelete(converted.c_str());
+  result.throw_if_error("Failed to remove database");
+}
+
+auto database::open(std::string_view file, std::optional<acl::names> names)
+  -> std::optional<database> {
+  database db{{.path = dmn::lmbcs::from_string(file), .names = std::move(names)}};
+  if (!db.open_impl()) {
+    return std::nullopt;
+  }
+
+  return {std::move(db)};
 }
 
 auto database::get_acl() const -> dmn::acl::manager { return dmn::acl::manager::read(*this); }
@@ -106,7 +110,7 @@ auto database::run_query(const dmn::dql::expression& query, size_t limit) const
 
     auto note = get_note(note_id);
     if (note) {
-      output.emplace_back(std::move(*note));
+      output.emplace_back(*note);
     }
   }
 
@@ -143,4 +147,20 @@ auto database::get_path() const -> std::string {
   // Make path HTTP safe
   std::ranges::transform(raw_path, raw_path.begin(), [](auto& c) { return c == '\\' ? '/' : c; });
   return raw_path.to_string();
+}
+
+auto database::get_handle() const -> handle_t {
+  auto& store = detail::thread_context::current().get<dmn::database>();
+  store.remove_stale();
+
+  auto* entry = store.find(state_);
+  if (entry != nullptr) {
+    return entry->handle.get();
+  }
+
+  auto handle = open_impl();
+  if (!handle) {
+    throw dmn::invalid_handle("The database has disappeared");
+  }
+  return *handle;
 }

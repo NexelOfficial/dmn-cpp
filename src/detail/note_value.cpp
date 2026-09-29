@@ -20,13 +20,6 @@ void note_value<dmn::time_date>::apply(const dmn::time_date& value, setter_func_
   std::invoke(setter, dmn::type::time, std::as_bytes(span));
 }
 
-void note_value<dmn::object>::apply(const dmn::object& value, setter_func_t setter) {
-  auto cursor = value.get_cursor();
-  const auto typ = cursor.read<dmn::type>();
-  const std::span span{cursor.get_pointer(), cursor.size() - sizeof(dmn::type)};
-  std::invoke(setter, typ, span);
-}
-
 void note_value<dmn::list>::apply(const dmn::list& value, setter_func_t setter) {
   const auto cursor = value.get_cursor();
   const std::span span{cursor.get_pointer(sizeof(dmn::type)), cursor.size() - sizeof(dmn::type)};

@@ -10,6 +10,9 @@
 namespace dmn::acl {
 class role {
  public:
+  /// Create a role from a name with optional brackets.
+  ///
+  /// \throws dmn::invalid_argument If the normalized role name is empty.
   constexpr explicit role(std::string name) : name_(normalize(std::move(name))) {
     if (name_.empty()) {
       throw dmn::invalid_argument("ACL role name cannot be empty");
@@ -35,6 +38,7 @@ class role {
 ///
 /// \throws dmn::invalid_handle If the underlying handle is empty.
 /// \throws dmn::native_error In case of a lower level failure.
+/// \throws dmn::out_of_range If a requested operation exceeds the role list's bounds or capacity.
 class role_map : private detail::runtime {
  public:
   using value_type = std::pair<size_t, acl::role>;

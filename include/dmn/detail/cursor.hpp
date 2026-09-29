@@ -16,20 +16,31 @@ concept is_container_like = requires(T t) {
 };
 
 namespace dmn::detail {
+/// Cursor that can walk through a chunk of memory
+///
+/// \throws dmn::out_or_range If memory is accessed outside the cursor.
 class cursor : protected detail::runtime {
  public:
+  /// Create a cursor object using a pointer and size.
+  ///
+  /// \param ptr The pointer to view.
+  /// \param size Size of the memory chunk.
   cursor(std::byte* ptr, size_t size) noexcept : buffer_(ptr, size) {
     if (ptr == nullptr) {
       buffer_ = buffer_.subspan(0, 0);
     }
   };
 
+  /// Reset the offset back to zero.
   void reset() noexcept { offset_ = 0; }
+
+  /// Start viewing another pointer and size and set offset to zero.
   void reset(std::byte* ptr, size_t size) noexcept {
     buffer_ = {ptr, size};
     offset_ = 0;
   }
 
+  /// Write a chunk of data and advance the cursor forward.
   template <typename T>
     requires std::is_trivially_copyable_v<T>
   void write(std::span<T> buffer) {
@@ -39,6 +50,7 @@ class cursor : protected detail::runtime {
     offset_ += bytes.size();
   }
 
+  /// Read a chunk of data and advance the cursor forward.
   template <typename T>
     requires std::is_trivially_copyable_v<T>
   void read(std::span<T> buffer) {
@@ -48,6 +60,9 @@ class cursor : protected detail::runtime {
     offset_ += bytes_size;
   }
 
+  /// Write a trivially copyable object and advance the cursor forward.
+  ///
+  /// \param typ An optional ODS type to use ods::write instead of memcpy.
   template <typename T>
     requires std::is_trivially_copyable_v<T> && (!is_container_like<T>)
   void write(const T& value, std::optional<detail::ods::type> typ = std::nullopt) {
@@ -62,6 +77,9 @@ class cursor : protected detail::runtime {
     offset_ += size;
   }
 
+  /// Read a trivially copyable type and advance the cursor forward.
+  ///
+  /// \param typ An optional ODS type to use ods::read instead of memcpy.
   template <typename T>
     requires std::is_trivially_copyable_v<T> && (!is_container_like<T>)
   [[nodiscard]] auto read(std::optional<detail::ods::type> typ = std::nullopt) -> T {
@@ -78,10 +96,13 @@ class cursor : protected detail::runtime {
     return out;
   }
 
+  /// Advance the offset foward by an amount.
   void advance_offset(size_t amount) noexcept { offset_ += amount; }
 
+  /// Manually set the offset to another position.
   void set_offset(size_t position) noexcept { offset_ = position; }
 
+  /// Get the current offset.
   [[nodiscard]] auto get_offset() const noexcept -> size_t { return offset_; }
 
   /// Get the pointer with a custom offset
@@ -97,6 +118,7 @@ class cursor : protected detail::runtime {
     return get_pointer<T>(get_offset());
   }
 
+  /// Get the size of the cursor memory.
   [[nodiscard]] auto size() const -> size_t { return buffer_.size(); }
 
  private:

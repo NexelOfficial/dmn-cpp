@@ -10,6 +10,7 @@
 
 #include "dmn/design/flags.hpp"
 #include "dmn/detail/attached_object.hpp"
+#include "dmn/detail/data_types.hpp"
 #include "dmn/detail/ods.hpp"
 #include "dmn/error.hpp"
 #include "dmn/time_date.hpp"
@@ -104,19 +105,21 @@ auto agent::set_comment(std::string_view comment) -> agent& {
 }
 
 auto agent::set_code(dmn::lotusscript code) -> agent& {
-  auto code_size = static_cast<uint16_t>(code.size());
+  auto code_size = detail::checked_cast<uint16_t>(code.size());
   auto lock = get_action_item_impl(code_size, ods::type::cdactionlotusscript);
 
-  const uint16_t length = ods::size(ods::type::cdactionlotusscript) + code_size;
-  const WSIG header{.Signature = SIG_ACTION_LOTUSSCRIPT, .Length = length};
+  const auto length = ods::size(ods::type::cdactionlotusscript) + code_size;
+  const WSIG header{
+    .Signature = SIG_ACTION_LOTUSSCRIPT, .Length = detail::checked_cast<uint16_t>(length)
+  };
   const CDACTIONLOTUSSCRIPT action{.Header = header, .dwScriptLen = code_size};
   lock.write(action, ods::type::cdactionlotusscript);
 
   const auto cursor = code.get_cursor();
   lock.write(std::span{cursor.get_pointer(), cursor.size()});
 
-  const dmn::object obj{std::move(lock)};
-  note_.set(ASSIST_ACTION_ITEM, obj, dmn::item_flag::sign);
+  const dmn::value val{std::move(lock)};
+  note_.set(ASSIST_ACTION_ITEM, val, dmn::item_flag::sign);
   note_.set(
     ASSIST_TYPE_ITEM, std::to_underlying(design::language::lotusscript), dmn::item_flag::sign
   );
@@ -125,19 +128,21 @@ auto agent::set_code(dmn::lotusscript code) -> agent& {
 }
 
 auto agent::set_code(dmn::formula code) -> agent& {
-  auto code_size = static_cast<uint16_t>(code.size(true));
+  auto code_size = detail::checked_cast<uint16_t>(code.size(true));
   auto lock = get_action_item_impl(code_size, ods::type::cdactionformula);
 
-  const uint16_t length = ods::size(ods::type::cdactionformula) + code_size;
-  const WSIG header{.Signature = SIG_ACTION_FORMULA, .Length = length};
+  const auto length = ods::size(ods::type::cdactionformula) + code_size;
+  const WSIG header{
+    .Signature = SIG_ACTION_FORMULA, .Length = detail::checked_cast<uint16_t>(length)
+  };
   const CDACTIONFORMULA action{.Header = header, .wFormulaLen = code_size};
   lock.write(action, ods::type::cdactionformula);
 
   const auto cursor = code.get_cursor();
   lock.write(std::span{cursor.get_pointer(), cursor.size()});
 
-  const dmn::object obj{std::move(lock)};
-  note_.set(ASSIST_ACTION_ITEM, obj, dmn::item_flag::sign);
+  const dmn::value val{std::move(lock)};
+  note_.set(ASSIST_ACTION_ITEM, val, dmn::item_flag::sign);
   note_.set(ASSIST_TYPE_ITEM, std::to_underlying(design::language::formula), dmn::item_flag::sign);
   note_.set(DESIGN_FLAGS, flags::from_language(design::language::formula));
   return *this;
@@ -179,8 +184,8 @@ void agent::set_action_ex() {
   auto lock = detail::locker::allocate(4);
   lock.write(dmn::type::lsobject);
 
-  const dmn::object obj{std::move(lock)};
-  note_.set(ASSIST_EXACTION_ITEM, obj, dmn::item_flag::sign);
+  const dmn::value val{std::move(lock)};
+  note_.set(ASSIST_EXACTION_ITEM, val, dmn::item_flag::sign);
 }
 
 void agent::set_run_info() {

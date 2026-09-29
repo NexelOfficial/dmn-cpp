@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <limits>
 #include <type_traits>
 
 #include "dmn/detail/cursor.hpp"
@@ -31,22 +30,30 @@ class locker : public detail::cursor {
   /// Construct a locker from an OS memory handle.
   ///
   /// \param hdl OS memory handle.
-  /// \param size Size of the memory region. Defaults to the numerical maximum of size_t.
   /// \param own Ownership mode for the handle. See `dmn::utils::ownership` for details.
-  locker(
-    detail::dhandle_t hdl, size_t size = std::numeric_limits<size_t>::max(),
-    ownership own = ownership::take
-  );
+  /// \note Will automatically determine the memory size using the provided handle.
+  locker(detail::dhandle_t hdl, ownership own = ownership::take);
 
   /// Construct a locker from a block id.
   ///
   /// \param bid Valid block id.
-  /// \param size Size of the memory region. Defaults to the numerical maximum of size_t.
   /// \param own Ownership mode for the handle. See `dmn::utils::ownership` for details.
-  locker(
-    detail::block_id bid, size_t size = std::numeric_limits<size_t>::max(),
-    ownership own = ownership::take
-  );
+  /// \note Will automatically determine the memory size using the provided block id.
+  locker(detail::block_id bid, ownership own = ownership::take);
+
+  /// Construct a locker from an OS memory handle.
+  ///
+  /// \param hdl OS memory handle.
+  /// \param size Size of the memory region.
+  /// \param own Ownership mode for the handle. See `dmn::utils::ownership` for details.
+  locker(detail::dhandle_t hdl, size_t size, ownership own = ownership::take);
+
+  /// Construct a locker from a block id.
+  ///
+  /// \param bid Valid block id.
+  /// \param size Size of the memory region.
+  /// \param own Ownership mode for the handle. See `dmn::utils::ownership` for details.
+  locker(detail::block_id bid, size_t size, ownership own = ownership::take);
 
   /// Allocate a chunk of memory on the server
   ///
@@ -54,7 +61,7 @@ class locker : public detail::cursor {
   /// \param buffer Buffer holding the data to copy.
   /// \param own Ownership mode for the handle. See `dmn::utils::ownership` for details.
   /// \return Instance of `detail::locker`.
-  /// \throws dmn::illegal_argument If the provided size is zero.
+  /// \throws dmn::invalid_argument If the provided size is zero.
   /// \throws dmn::native_error If allocating the memory failed.
   /// \note The requested size can not be zero.
   template <typename T>
@@ -71,19 +78,27 @@ class locker : public detail::cursor {
   /// \param size Size of the memory to allocate
   /// \param own Ownership mode for the handle. See `dmn::utils::ownership` for details.
   /// \return Instance of `detail::locker`.
-  /// \throws dmn::illegal_argument If the provided size is zero.
+  /// \throws dmn::invalid_argument If the provided size is zero.
   /// \throws dmn::native_error If allocating the memory failed.
   /// \note The requested size can not be zero.
   static auto allocate(size_t size, ownership own = ownership::take) -> locker {
     return allocate_impl(size, own);
   }
 
+  /// Get the ownership of the locker.
   [[nodiscard]] auto get_ownership() -> ownership { return own_; }
 
+  /// Release the block id (or handle) under the locker.
+  ///
+  /// The ownership of the locker no longer has any effect.
   [[nodiscard]] auto release() -> detail::block_id { return hdl_.release(); }
 
+  /// Get the underlying block id.
   [[nodiscard]] auto get_block_id() const -> detail::block_id { return hdl_.get(); }
 
+  /// Get the underlying handle.
+  ///
+  /// \note When the locker was created using a block id, the offset is lost.
   [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return hdl_.get().pool; }
 
  private:

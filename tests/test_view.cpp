@@ -7,6 +7,7 @@
 #include "dmn/design/color.hpp"
 #include "dmn/design/column.hpp"
 #include "dmn/design/view.hpp"
+#include "dmn/error.hpp"
 #include "dmn/view.hpp"
 #include "dmn/note.hpp"
 #include "utils.hpp"
@@ -52,6 +53,8 @@ TEST_CASE("a view can be created through the design API", "[nsf][design]") {
   design_view.set_selection_formula(dmn::formula{"@All"});
   design_view.set_background_color(design::color::light_gray);
   design_view.save();
+
+  utils::run_threaded([&]() { REQUIRE_THROWS_AS(design_view.save(), dmn::thread_access_error); });
 
   const std::array<std::pair<std::string, double>, 4> values{{
     {"Alpha", 10},

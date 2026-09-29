@@ -5,11 +5,12 @@
 #include <string_view>
 #include <type_traits>
 
+#include "dmn/detail/locker.hpp"
 #include "dmn/formula.hpp"
 #include "dmn/list.hpp"
 #include "dmn/time_date.hpp"
-#include "dmn/object.hpp"
 #include "dmn/type.hpp"
+#include "dmn/value.hpp"
 
 namespace dmn::detail {
 using setter_func_t = std::function<void(dmn::type, std::span<const std::byte>)>;
@@ -38,11 +39,6 @@ struct note_value<dmn::time_date> {
 };
 
 template <>
-struct note_value<dmn::object> {
-  static void apply(const dmn::object& value, setter_func_t setter);
-};
-
-template <>
 struct note_value<dmn::list> {
   static void apply(const dmn::list& value, setter_func_t setter);
 };
@@ -53,7 +49,18 @@ struct note_value<dmn::formula> {
 };
 
 template <typename T>
-  requires std::is_convertible_v<T, std::string_view> && (!std::is_same_v<T, std::string_view>)
+  requires std::derived_from<std::remove_cvref_t<T>, dmn::value_impl>
+struct note_value<T> {
+  static void apply(const T& value, setter_func_t setter) {
+    detail::locker cursor = value.get_cursor();
+    const auto typ = cursor.read<dmn::type>();
+    const std::span span{cursor.get_pointer(), cursor.size() - sizeof(dmn::type)};
+    std::invoke(setter, typ, span);
+  }
+};
+
+template <typename T>
+  requires std::convertible_to<T, std::string_view> && (!std::same_as<T, std::string_view>)
 struct note_value<T> {
   static void apply(const T& value, setter_func_t setter) {
     if constexpr (std::is_array_v<T>) {
@@ -67,7 +74,7 @@ struct note_value<T> {
 };
 
 template <typename T>
-  requires std::is_arithmetic_v<T> && (!std::is_same_v<T, double>)
+  requires std::is_arithmetic_v<T> && (!std::same_as<T, double>)
 struct note_value<T> {
   static void apply(const T& value, setter_func_t setter) {
     note_value<double>::apply(static_cast<double>(value), std::move(setter));

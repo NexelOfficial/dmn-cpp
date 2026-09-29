@@ -7,6 +7,10 @@
 #include "dmn/error.hpp"
 
 namespace dmn {
+/// Scoped lock for a Note.
+///
+/// \throws dmn::invalid_handle If an underlying handle is empty.
+/// \throws dmn::native_error In case of a lower level failure.
 class note_lock : protected detail::runtime {
  public:
   note_lock() = delete;
@@ -28,15 +32,13 @@ class note_lock : protected detail::runtime {
   /// \param db Database containing the note to lock.
   /// \param noteid Note ID of the note to lock.
   /// \return A note_lock instance owning the acquired lock.
-  /// \throws dmn::native_error If the note is already locked or can't be acquired.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   [[nodiscard]] static auto acquire(dmn::database db, dmn::note_id noteid) -> note_lock;
 
   /// Try to acquire an exclusive lock for a note.
   ///
   /// \param db Database containing the note to lock.
   /// \param noteid Note ID of the note to lock.
-  /// \return A note_lock instance if the lock was acquired successfully, if available.
+  /// \return A note_lock instance if the lock was acquired successfully.
   [[nodiscard]] static auto try_acquire(dmn::database db, dmn::note_id noteid) noexcept
     -> std::optional<note_lock>;
 
@@ -47,9 +49,6 @@ class note_lock : protected detail::runtime {
   [[nodiscard]] auto try_unlock() noexcept -> bool;
 
   /// Release the owned note lock.
-  ///
-  /// \throws dmn::native_error If the note cannot be unlocked.
-  /// \throws dmn::invalid_handle If the underlying handle is empty.
   void unlock();
 
  private:

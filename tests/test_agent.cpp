@@ -41,6 +41,12 @@ auto setup_modify_agent(const dmn::database& db) -> design::agent {
   REQUIRE(design_agent.get_title() == title);
   REQUIRE(design_agent.get_comment().empty());
   REQUIRE_NOTHROW(design_agent.save());
+
+  utils::run_threaded([&]() {
+    REQUIRE_NOTHROW(design_agent.save());
+    REQUIRE_FALSE(design_agent.get_title().empty());
+  });
+
   return design_agent;
 }
 

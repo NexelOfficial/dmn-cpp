@@ -11,10 +11,7 @@ struct session {
   session(session&&) = delete;
   auto operator=(session&&) = delete;
 
-  static auto instance() -> session& {
-    static session s;
-    return s;
-  }
+  static auto instance() -> const session&;
 };
 
 struct thread {

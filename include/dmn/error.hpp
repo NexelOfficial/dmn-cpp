@@ -49,6 +49,14 @@ struct error : std::exception {
   std::string message_;
 };
 
+struct thread_error : error {
+  using error::error;
+};
+
+struct thread_access_error : thread_error {
+  using thread_error::thread_error;
+};
+
 struct invalid_handle : error {
   using error::error;
 };
@@ -62,6 +70,10 @@ struct conversion_error : error {
 };
 
 struct runtime_error : error {
+  using error::error;
+};
+
+struct overflow_error : error {
   using error::error;
 };
 

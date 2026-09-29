@@ -12,7 +12,7 @@
 #include <utility>
 
 #include "dmn/database.hpp"
-#include "dmn/object.hpp"
+#include "dmn/value.hpp"
 #include "dmn/error.hpp"
 #include "dmn/unid.hpp"
 #include "dmn/list.hpp"
@@ -22,13 +22,13 @@
 namespace fs = std::filesystem;
 
 namespace {
-auto get_item_value(const dmn::database& db, dmn::note_id nid) -> std::optional<dmn::object> {
+auto get_item_value(const dmn::database& db, dmn::note_id nid) -> std::optional<dmn::item_value> {
   auto note = db.get_note(nid);
   if (!note) {
     throw std::runtime_error("Failed to open note for item value");
   }
 
-  return note->get<dmn::object>("Subject");
+  return note->get<dmn::item_value>("Subject");
 };
 
 auto create_temp_attachment() -> fs::path {
@@ -46,11 +46,11 @@ auto create_temp_attachment() -> fs::path {
 TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   auto [db, name] = utils::random_database();
   REQUIRE(db->get_path().find(name) != std::string::npos);
-  REQUIRE(db->try_get_handle().has_value());
+  REQUIRE(db->get_handle());
 
   auto primary = db->create_note();
   REQUIRE(primary.info<dmn::info::note_id>() == dmn::note_id{});
-  REQUIRE(primary.try_get_handle().has_value());
+  REQUIRE(primary.get_handle());
   REQUIRE(primary.get_database().get_path().find(name) != std::string::npos);
 
   const std::string subject = utils::random_small_string() + "UTF-8: 🐶";
@@ -106,7 +106,7 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   const auto zero_bool_value = primary.get<bool>("ZeroValue");
   const auto tags_value = primary.get<dmn::list>("Tags");
   const auto date_value = primary.get<dmn::time_date>("DateValue");
-  const auto raw_numeric_value = primary.get<dmn::object>("NumericValue");
+  const auto raw_numeric_value = primary.get<dmn::item_value>("NumericValue");
 
   REQUIRE_FALSE(numeric_text_value.has_value());
   REQUIRE(numeric_value.has_value());
@@ -192,6 +192,20 @@ TEST_CASE("note database lifecycle and item operations", "[nsf][note]") {
   REQUIRE(copied_subject.value() == replacement_subject);
   REQUIRE(copied_tags.has_value());
   REQUIRE(copied_tags.value().size() == 3);
+
+  auto unsaved_note = db->create_note();
+  utils::run_threaded([&]() {
+    REQUIRE_THROWS_AS(unsaved_note.get_handle(), dmn::thread_access_error);
+    REQUIRE(primary.get_handle());
+    REQUIRE(primary.get_database().get_handle());
+
+    const auto threaded_subject = copy.get<std::string>("Subject");
+    const auto threaded_tags = copy.get<dmn::list>("Tags");
+    REQUIRE(threaded_subject.has_value());
+    REQUIRE(threaded_subject.value() == replacement_subject);
+    REQUIRE(threaded_tags.has_value());
+    REQUIRE(threaded_tags.value().size() == 3);
+  });
 
   REQUIRE_NOTHROW(primary.remove(true));
   REQUIRE_FALSE(db->get_note(original_noteid).has_value());

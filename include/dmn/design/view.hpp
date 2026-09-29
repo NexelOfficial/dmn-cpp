@@ -2,15 +2,15 @@
 
 #include <array>
 #include <cstdint>
+#include <deque>
 #include <string_view>
-#include <vector>
 
 #include "dmn/detail/runtime.hpp"
 #include "dmn/design/column.hpp"
 #include "dmn/design/color.hpp"
 #include "dmn/formula.hpp"
 #include "dmn/note.hpp"
-#include "dmn/object.hpp"
+#include "dmn/value.hpp"
 
 namespace dmn {
 class database;
@@ -43,26 +43,42 @@ struct view_table_format2 {
   std::array<uint16_t, 4> spare;
 };
 
-class view : private detail::runtime {
+/// Domino view design element.
+///
+/// \throws dmn::invalid_handle If an underlying handle is empty.
+/// \throws dmn::native_error In case of a lower level failure.
+class view : private detail::runtime {  // NOLINT(bugprone-exception-escape)
  public:
+  /// Create a view design element.
+  ///
+  /// \throws dmn::runtime_error If a view with the title already exists.
   static auto create(const dmn::database& db, std::string_view title) -> view;
 
+  /// Access or create a column.
   auto column(std::string_view title) -> design::column&;
+
+  /// Set the selection formula.
   auto set_selection_formula(dmn::formula formula) -> view&;
+
+  /// Set the background color.
   auto set_background_color(design::color color) -> view&;
+
+  /// Save the view design.
+  ///
+  /// \throws dmn::runtime_error If a column formula is misconfigured.
   void save();
 
  private:
   dmn::note note_;
   dmn::formula selection_;
-  view_table_format table_format_{};
-  view_table_format2 table_format2_{};
-  std::vector<design::column> columns_;
+  view_table_format table_format_;
+  view_table_format2 table_format2_;
+  std::deque<design::column> columns_;
 
   view(dmn::note note);
 
   static auto open_impl(dmn::note note) -> view;
-  [[nodiscard]] auto build_view_format() -> dmn::object;
-  [[nodiscard]] auto build_collation() const -> dmn::object;
+  [[nodiscard]] auto build_view_format() -> dmn::value;
+  [[nodiscard]] auto build_collation() const -> dmn::value;
 };
 }  // namespace dmn::design
