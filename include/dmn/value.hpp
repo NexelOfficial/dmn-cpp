@@ -6,7 +6,7 @@
 #include <utility>
 
 #include "dmn/detail/block.hpp"
-#include "dmn/detail/uhandle.hpp"
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/object_value.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/error.hpp"
@@ -119,7 +119,7 @@ class value final : public value_impl {
   [[nodiscard]] auto size() const -> size_t override { return size_; }
 
  private:
-  detail::uhandle<handle_t> hdl_;
+  detail::scoped_handle<handle_t> hdl_;
   size_t size_;
 };
 

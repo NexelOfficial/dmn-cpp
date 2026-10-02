@@ -6,8 +6,8 @@
 #include <string_view>
 #include <vector>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 #include "dmn/acl/names.hpp"
 #include "dmn/acl/flag.hpp"
 #include "dmn/database.hpp"
@@ -67,7 +67,7 @@ class manager : private detail::runtime {
 
  private:
   dmn::database db_;
-  using managed_handle_t = dmn::detail::uhandle<handle_t>;
+  using managed_handle_t = dmn::detail::scoped_handle<handle_t>;
   std::shared_ptr<managed_handle_t> hdl_;
   bool newly_created_;
 

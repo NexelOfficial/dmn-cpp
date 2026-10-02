@@ -5,8 +5,8 @@
 #include <optional>
 #include <string>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 #include "dmn/list.hpp"
 
 namespace dmn {
@@ -62,8 +62,8 @@ class mail : protected detail::runtime {
   [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return msg_hdl_.get(); }
 
  private:
-  detail::uhandle<detail::dhandle_t> file_hdl_;
-  detail::uhandle<detail::dhandle_t> msg_hdl_;
+  detail::scoped_handle<detail::dhandle_t> file_hdl_;
+  detail::scoped_handle<detail::dhandle_t> msg_hdl_;
 
   dmn::list send_to_;
   dmn::list copy_to_;

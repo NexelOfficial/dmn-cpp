@@ -51,7 +51,7 @@ auto agent::run(const std::optional<dmn::note>& note) const -> std::optional<std
   dmn::status result = AgentCreateRunContext(agent_hdl, nullptr, 0, &agent_ctx);
   result.throw_if_error("Failed to create run context");
 
-  const detail::uhandle<HAGENTCTX> ctx(agent_ctx, AgentDestroyRunContext);
+  const detail::scoped_handle<HAGENTCTX> ctx(agent_ctx, AgentDestroyRunContext);
 
   // Set document context (if provided)
   if (note) {

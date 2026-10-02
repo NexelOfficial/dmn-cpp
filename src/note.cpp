@@ -52,7 +52,7 @@ auto note::open_impl() const -> std::optional<handle_t> {
   }
   result.throw_if_error("Failed to open note");
 
-  detail::uhandle<handle_t> managed{handle, NSFNoteClose};
+  detail::scoped_handle<handle_t> managed{handle, NSFNoteClose};
   return store.insert(state_, std::move(managed)).handle.get();
 }
 
@@ -83,7 +83,7 @@ auto note::create(dmn::database db) -> note {
   uint16_t note_class = NOTE_CLASS_DOCUMENT;
   NSFNoteSetInfo(handle, _NOTE_CLASS, &note_class);
 
-  detail::uhandle<handle_t> managed{handle, NSFNoteClose};
+  detail::scoped_handle<handle_t> managed{handle, NSFNoteClose};
   return note({.db = std::move(db), .hdl = std::move(managed)});
 }
 
@@ -269,6 +269,6 @@ auto note::get_handle() const -> handle_t {
     NSFNoteOpen(state_->db.get_handle(), state_->note_id.value, 0, &handle);
   result.throw_if_error("Failed to open note");
 
-  detail::uhandle<handle_t> managed{handle, NSFNoteClose};
+  detail::scoped_handle<handle_t> managed{handle, NSFNoteClose};
   return store.insert(state_, std::move(managed)).handle.get();
 }

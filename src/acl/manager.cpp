@@ -115,14 +115,14 @@ manager::manager(dmn::database db, dmn::detail::dhandle_t handle, bool newly_cre
       newly_created_(newly_created) {}
 
 auto manager::read(const dmn::database& db) -> manager {
-  dmn::detail::uhandle<dmn::detail::dhandle_t> handle(OSMemFree);
+  dmn::detail::scoped_handle<dmn::detail::dhandle_t> handle(OSMemFree);
   const dmn::status result = NSFDbReadACL(db.get_handle(), handle.data());
   result.throw_if_error("Failed to read ACL");
   return {db, handle.release(), false};
 }
 
 auto manager::create(const dmn::database& db) -> manager {
-  dmn::detail::uhandle<dmn::detail::dhandle_t> handle(OSMemFree);
+  dmn::detail::scoped_handle<dmn::detail::dhandle_t> handle(OSMemFree);
   const dmn::status result = ACLCreate(handle.data());
   result.throw_if_error("Failed to create ACL");
   return {db, handle.release(), true};

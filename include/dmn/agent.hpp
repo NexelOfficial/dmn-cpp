@@ -28,7 +28,7 @@ class agent : protected detail::runtime {
 
  private:
   dmn::database db_;
-  detail::uhandle<handle_t> hdl_;
+  detail::scoped_handle<handle_t> hdl_;
 
   agent(dmn::database db, handle_t handle);
 

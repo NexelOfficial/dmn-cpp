@@ -11,7 +11,7 @@
 #include <optional>
 
 #include "dmn/detail/thread_context.hpp"
-#include "dmn/detail/uhandle.hpp"
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/acl/manager.hpp"
 #include "dmn/acl/access.hpp"
 #include "dmn/acl/names.hpp"
@@ -41,7 +41,7 @@ auto database::open_impl() const -> std::optional<handle_t> {
   }
   result.throw_if_error("Failed to open database");
 
-  detail::uhandle<handle_t> managed{handle, NSFDbClose};
+  detail::scoped_handle<handle_t> managed{handle, NSFDbClose};
   return store.insert(state_, std::move(managed)).handle.get();
 }
 
@@ -97,7 +97,7 @@ auto database::run_query(const dmn::dql::expression& query, size_t limit) const
   );
   result.throw_if_error("Failed to run DQL query");
 
-  const detail::uhandle<detail::dhandle_t> managed{table_hdl, OSMemFree};
+  const detail::scoped_handle<detail::dhandle_t> managed{table_hdl, OSMemFree};
 
   std::vector<dmn::note> output = {};
   BOOL is_first_note = TRUE;

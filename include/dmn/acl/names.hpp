@@ -4,9 +4,9 @@
 #include <optional>
 #include <string>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 
 namespace dmn::acl {
 enum class authentication_state : uint8_t {
@@ -58,7 +58,7 @@ class names : private detail::runtime {
   [[nodiscard]] auto get_handle() const -> handle_t { return hdl_.get(); }
 
  private:
-  detail::uhandle<handle_t> hdl_;
+  detail::scoped_handle<handle_t> hdl_;
 
   names(handle_t handle);
 };

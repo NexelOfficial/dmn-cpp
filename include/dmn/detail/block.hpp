@@ -2,8 +2,8 @@
 
 #include <concepts>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 #include "dmn/detail/hook.hpp"
 
 namespace dmn::detail {

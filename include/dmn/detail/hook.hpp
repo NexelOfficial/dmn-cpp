@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "dmn/detail/uhandle.hpp"
+#include "dmn/detail/scoped_handle.hpp"
 
 namespace dmn::detail::hook {
 /// Install the Domino memory hooks.

@@ -4,7 +4,7 @@
 #include <typeindex>
 #include <unordered_map>
 
-#include "dmn/detail/uhandle.hpp"
+#include "dmn/detail/scoped_handle.hpp"
 
 namespace dmn::detail {
 struct handle_state {
@@ -15,9 +15,9 @@ struct handle_state {
 template <typename State, typename Handle>
 struct thread_handle {
   std::weak_ptr<State> state;
-  detail::uhandle<Handle> handle;
+  detail::scoped_handle<Handle> handle;
 
-  thread_handle(const std::shared_ptr<State>& state, detail::uhandle<Handle>&& handle)
+  thread_handle(const std::shared_ptr<State>& state, detail::scoped_handle<Handle>&& handle)
       : state(state), handle(std::move(handle)) {}
 };
 
@@ -46,7 +46,7 @@ class thread_handle_store {
   }
 
   auto insert(
-    const std::shared_ptr<typename T::state>& state, detail::uhandle<typename T::handle_t> handle
+    const std::shared_ptr<typename T::state>& state, detail::scoped_handle<typename T::handle_t> handle
   ) -> entry_type& {
     auto [it, _] = handles_.try_emplace(state.get(), state, std::move(handle));
     return it->second;

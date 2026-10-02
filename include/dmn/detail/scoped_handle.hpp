@@ -15,8 +15,8 @@ using dhandle_t = uint32_t;
 template <typename T>
 /// Wrapper for raw handles to properly manage them.
 ///
-/// \throws dmn::thread_error If accessed from a different thread.
-class uhandle {
+/// \throws dmn::thread_access_error If accessed from a different thread.
+class scoped_handle {
  public:
   using cleanup_t = std::function<void(T)>;
 
@@ -24,7 +24,7 @@ class uhandle {
   ///
   /// \param fn Cleanup function that is called when the managed handle is destroyed.
   /// \note The cleanup function is never called when the handle is null.
-  explicit uhandle(cleanup_t fn) noexcept
+  explicit scoped_handle(cleanup_t fn) noexcept
       : cleanup(std::move(fn)), owner_(std::this_thread::get_id()) {}
 
   /// Create a handle wrapper from an existing handle.
@@ -32,10 +32,10 @@ class uhandle {
   /// \param handle Handle to manage.
   /// \param fn Cleanup function that is called when the managed handle is destroyed.
   /// \note The cleanup function is never called when the handle is null.
-  explicit uhandle(T handle, cleanup_t fn) noexcept
+  explicit scoped_handle(T handle, cleanup_t fn) noexcept
       : hdl_(handle), cleanup(std::move(fn)), owner_(std::this_thread::get_id()) {}
 
-  ~uhandle() noexcept {
+  ~scoped_handle() noexcept {
     assert(owner_ == std::this_thread::get_id());
     if (!is_owner_thread()) {
       std::terminate();
@@ -44,15 +44,15 @@ class uhandle {
     reset_unchecked();
   }
 
-  uhandle(const uhandle&) = delete;
-  auto operator=(const uhandle&) -> uhandle& = delete;
+  scoped_handle(const scoped_handle&) = delete;
+  auto operator=(const scoped_handle&) -> scoped_handle& = delete;
 
-  uhandle(uhandle&& other) noexcept
+  scoped_handle(scoped_handle&& other) noexcept
       : hdl_(std::exchange(other.hdl_, null_value())),
         cleanup(std::move(other.cleanup)),
         owner_(other.owner_) {}
 
-  auto operator=(uhandle&& other) noexcept -> uhandle& {
+  auto operator=(scoped_handle&& other) noexcept -> scoped_handle& {
     if (this != &other) {
       assert(owner_ == std::this_thread::get_id());
       if (!is_owner_thread()) {
@@ -91,7 +91,7 @@ class uhandle {
 
   /// Replace the managed handle.
   ///
-  /// Calls `uhandle::reset()` and starts managing the provided handle.
+  /// Calls `scoped_handle::reset()` and starts managing the provided handle.
   void put(T handle) {
     check_thread();
     reset();

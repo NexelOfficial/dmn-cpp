@@ -3,9 +3,9 @@
 #include <string>
 #include <string_view>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
 namespace detail {
@@ -45,7 +45,7 @@ class formula : protected detail::runtime {
 
   /// Add a summary item to the Formula.
   void add_summary(std::string_view item_name) const;
-  
+
   /// Add a summary item to the Formula.
   void add_summary(dmn::lmbcs_view item_name) const;
 
@@ -66,7 +66,7 @@ class formula : protected detail::runtime {
   [[nodiscard]] auto get_handle() const -> handle_t { return hdl_.get(); }
 
  private:
-  detail::uhandle<handle_t> hdl_;
+  detail::scoped_handle<handle_t> hdl_;
 
   formula(std::span<std::byte> buffer);
   formula(handle_t hdl);

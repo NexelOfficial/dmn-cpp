@@ -8,10 +8,10 @@
 #include <string>
 #include <unordered_map>
 
-#include "dmn/detail/note_value.hpp"
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/object_value.hpp"
+#include "dmn/detail/note_value.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 #include "dmn/flags.hpp"
 #include "dmn/value.hpp"
 #include "dmn/lmbcs.hpp"
@@ -34,7 +34,7 @@ class note : protected detail::runtime {
   struct state {
     dmn::database db;
     dmn::note_id note_id;
-    std::optional<detail::uhandle<handle_t>> hdl;
+    std::optional<detail::scoped_handle<handle_t>> hdl;
   };
 
   note() = delete;

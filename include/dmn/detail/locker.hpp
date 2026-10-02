@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/cursor.hpp"
 #include "dmn/detail/block.hpp"
-#include "dmn/detail/uhandle.hpp"
 
 namespace dmn::detail {
 enum class ownership : uint8_t {
@@ -98,7 +98,7 @@ class locker : public detail::cursor {
   [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return hdl_.get().handle(); }
 
  private:
-  detail::uhandle<detail::block_id> hdl_;
+  detail::scoped_handle<detail::block_id> hdl_;
   ownership own_;
   size_t size_;
 

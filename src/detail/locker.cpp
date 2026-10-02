@@ -4,8 +4,8 @@
 #include <domino/osmem.h>
 #include <domino/pool.h>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 #include "dmn/detail/block.hpp"
 #include "dmn/error.hpp"
 

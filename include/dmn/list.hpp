@@ -5,9 +5,9 @@
 #include <span>
 #include <string>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
 namespace detail {
@@ -97,7 +97,7 @@ class list : protected detail::runtime {
   [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return hdl_.get(); }
 
  private:
-  detail::uhandle<detail::dhandle_t> hdl_;
+  detail::scoped_handle<detail::dhandle_t> hdl_;
   uint16_t size_ = 0;
 
   list(std::span<std::byte> buffer);
