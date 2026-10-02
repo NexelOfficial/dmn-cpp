@@ -70,12 +70,14 @@ find_library(
 )
 
 set_target_properties(notes::notes PROPERTIES
-  IMPORTED_LOCATION "${NOTES_LIBRARY}"
-  INTERFACE_INCLUDE_DIRECTORIES
-  "${CMAKE_CURRENT_SOURCE_DIR}/third_party/domino/include"
+IMPORTED_LOCATION "${NOTES_LIBRARY}"
+INTERFACE_INCLUDE_DIRECTORIES
+"${CMAKE_CURRENT_SOURCE_DIR}/third_party/domino/include"
 )
 
-target_link_libraries(dmn PRIVATE notes::notes)
+find_package(polyhook_2 CONFIG REQUIRED)
+
+target_link_libraries(dmn PRIVATE notes::notes PolyHook_2::PolyHook_2)
 
 set_target_properties(
   dmn PROPERTIES

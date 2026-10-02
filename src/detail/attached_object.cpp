@@ -41,7 +41,7 @@ void attached_object::append_to_note(const dmn::note& note, std::string_view key
   lock.write(desc, ods::type::object_descriptor);
 
   const auto converted = dmn::lmbcs::from_string(key);
-  const BLOCKID bid{.pool = lock.get_handle(), .block = 0};
+  const auto bid = lock.get_block_id().convert<BLOCKID>();
   const dmn::status result = NSFItemAppendObject(
     note.get_handle(), ITEM_SUMMARY, converted.c_str(), converted.size(), bid, lock.size(), TRUE
   );

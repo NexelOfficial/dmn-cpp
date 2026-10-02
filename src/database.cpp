@@ -4,13 +4,12 @@
 #include <domino/nsfdb.h>
 #include <domino/dbmisc.h>
 #include <domino/idtable.h>
+#include <domino/osmem.h>
 
 #include <algorithm>
 #include <cstring>
-#include <limits>
 #include <optional>
 
-#include "dmn/detail/locker.hpp"
 #include "dmn/detail/thread_context.hpp"
 #include "dmn/detail/uhandle.hpp"
 #include "dmn/acl/manager.hpp"
@@ -98,7 +97,7 @@ auto database::run_query(const dmn::dql::expression& query, size_t limit) const
   );
   result.throw_if_error("Failed to run DQL query");
 
-  const detail::locker obj(table_hdl, std::numeric_limits<size_t>::max(), detail::ownership::free);
+  const detail::uhandle<detail::dhandle_t> managed{table_hdl, OSMemFree};
 
   std::vector<dmn::note> output = {};
   BOOL is_first_note = TRUE;
@@ -153,7 +152,7 @@ auto database::get_handle() const -> handle_t {
   auto& store = detail::thread_context::current().get<dmn::database>();
   store.remove_stale();
 
-  auto* entry = store.find(state_);
+  const auto* entry = store.find(state_);
   if (entry != nullptr) {
     return entry->handle.get();
   }

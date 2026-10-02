@@ -16,7 +16,7 @@ formula::formula(handle_t hdl) : hdl_(hdl, OSMemFree) {};
 
 formula::formula(std::span<std::byte> buffer) : hdl_(OSMemFree) {
   auto obj = detail::locker::allocate<std::byte>(buffer);
-  hdl_.put(obj.release().block);
+  hdl_.put(*obj.release());
 }
 
 formula::formula(std::string_view code) : hdl_(OSMemFree) {
@@ -85,7 +85,7 @@ void formula::add_item_name(dmn::lmbcs_view item_name) const {
   const auto name_size = detail::checked_cast<uint16_t>(item_name.size());
   const auto section_size = sizeof(uint16_t) + name_size;
   const auto padding = section_size & 1U;
-  
+
   const auto padded_size = detail::checked_cast<uint16_t>(section_size + padding);
   const auto new_length = detail::checked_cast<uint16_t>(hdr.length + padded_size);
   const auto new_offset = detail::checked_cast<uint16_t>(hdr.offset + padded_size);

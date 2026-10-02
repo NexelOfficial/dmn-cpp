@@ -13,7 +13,7 @@ TEST_CASE("a note can be persisted and reopened", "[nsf][database]") {
 
   const std::string subject = "Database test subject " + utils::random_small_string();
 
-  auto note = db->create_note();
+  const auto note = db->create_note();
   note.set("Subject", subject);
   note.set("Category", "database");
   note.save(true);
@@ -24,7 +24,7 @@ TEST_CASE("a note can be persisted and reopened", "[nsf][database]") {
   REQUIRE(noteid.value != 0);
   REQUIRE(unid.to_string().size() == 32);
 
-  auto non_existent = dmn::database::open("Empty.nsf");
+  const auto non_existent = dmn::database::open("Empty.nsf");
   REQUIRE_FALSE(non_existent.has_value());
 
   SECTION("reopen by note ID") {
@@ -55,7 +55,7 @@ TEST_CASE("a database can be used in threads", "[nsf][database]") {
   const auto main_handle = db->get_handle();
   REQUIRE(main_handle);
 
-  utils::run_threaded([&]() {
+  utils::run_threaded([&] {
     const auto handle = db->get_handle();
     REQUIRE(handle);
     REQUIRE(db->get_handle() == handle);
@@ -83,7 +83,7 @@ TEST_CASE("a persisted note can be found with DQL", "[nsf][database]") {
 
   const std::string subject = "DQL test subject " + utils::random_small_string();
 
-  auto note = db->create_note();
+  const auto note = db->create_note();
   note.set("Subject", subject);
   note.save(true);
 

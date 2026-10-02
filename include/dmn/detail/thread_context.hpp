@@ -7,6 +7,11 @@
 #include "dmn/detail/uhandle.hpp"
 
 namespace dmn::detail {
+struct handle_state {
+  uint32_t generation;
+  bool alive;
+};
+
 template <typename State, typename Handle>
 struct thread_handle {
   std::weak_ptr<State> state;
@@ -77,6 +82,10 @@ class thread_context {
 
   [[nodiscard]] static auto current() -> thread_context&;
 
+  [[nodiscard]] auto handles() noexcept -> std::unordered_map<detail::dhandle_t, handle_state>& {
+    return handles_;
+  }
+
   template <typename T>
   [[nodiscard]] auto get() -> thread_handle_store<T>& {
     const auto key = std::type_index(typeid(T));
@@ -89,6 +98,7 @@ class thread_context {
   }
 
  private:
+  std::unordered_map<detail::dhandle_t, handle_state> handles_;
   std::unordered_map<std::type_index, std::unique_ptr<storage_base>> storage_;
 };
 }  // namespace dmn::detail

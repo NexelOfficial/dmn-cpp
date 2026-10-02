@@ -13,7 +13,7 @@
 
 TEST_CASE("object conversion coverage", "[nos][object]") {
   auto [db, _] = utils::random_database();
-  auto note = db->create_note();
+  const auto note = db->create_note();
 
   dmn::list tags{};
   tags.push_back("alpha");
@@ -31,16 +31,13 @@ TEST_CASE("object conversion coverage", "[nos][object]") {
   note.set("ListValue", tags);
   note.save(false);
 
-  SECTION("item values work in threads") {
+  SECTION("item values throw in treads") {
     const auto text = note.get<dmn::item_value>("TextValue").value();
 
-    utils::run_threaded([&]() {
+    utils::run_threaded([&] {
       REQUIRE_THROWS_AS(tags.get_handle(), dmn::thread_access_error);
-      REQUIRE_FALSE(text.empty());
-      REQUIRE(text.is<std::string>());
-      REQUIRE(text.get_type() == dmn::type::text);
-      REQUIRE(text.try_as<std::string>().has_value());
-      REQUIRE(text.try_as<std::string>().value() == "🐶🐶🐶");
+      REQUIRE_THROWS_AS(text.get_type(), dmn::invalid_handle);
+      REQUIRE(text.try_as<std::string>() == std::nullopt);
     });
   }
 

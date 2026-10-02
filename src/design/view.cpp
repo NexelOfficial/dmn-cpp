@@ -37,7 +37,7 @@ static_assert(alignof(dmn::design::view_table_format2) == alignof(VIEW_TABLE_FOR
 
 namespace {
 auto make_item_name(uint16_t sequence) -> dmn::lmbcs {
-  auto name = "$" + std::to_string(sequence);
+  const auto name = "$" + std::to_string(sequence);
   return {std::string_view{name}};
 }
 }  // namespace
@@ -182,7 +182,7 @@ auto view::build_view_format() -> dmn::value {
     locker.write(current.format2_, ods::type::view_column_format2);
   }
 
-  return {std::move(locker)};
+  return dmn::value{std::move(locker)};
 }
 
 auto view::build_collation() const -> dmn::value {
@@ -230,5 +230,5 @@ auto view::build_collation() const -> dmn::value {
     locker.write(std::span{item_name.c_str(), item_name.size()});
   }
 
-  return {std::move(locker)};
+  return dmn::value{std::move(locker)};
 }

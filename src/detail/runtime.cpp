@@ -3,6 +3,7 @@
 #include <domino/global.h>
 
 #include "dmn/detail/thread_context.hpp"
+#include "dmn/detail/hook.hpp"
 #include "dmn/error.hpp"
 
 using dmn::detail::session;
@@ -11,9 +12,13 @@ using dmn::detail::thread;
 session::session() {
   const dmn::status result = NotesInit();
   result.throw_if_error("Failed to initialize Notes");
+  detail::hook::install();
 }
 
-session::~session() { NotesTerm(); }
+session::~session() {
+  detail::hook::uninstall();
+  NotesTerm();
+}
 
 auto session::instance() -> const session& {
   const static session s;

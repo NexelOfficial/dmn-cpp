@@ -183,7 +183,7 @@ auto note::items(std::optional<std::regex> pattern) const -> value_map_t {
 
   value_map_t output{};
   while (!result.is_not_found()) {
-    detail::block_id value_bid{};
+    BLOCKID value_bid{};
     uint16_t name_len = 0;
     DWORD value_len = 0;
 
@@ -191,13 +191,11 @@ auto note::items(std::optional<std::regex> pattern) const -> value_map_t {
     name.resize(MAX_FIELD_NAME_LEN);
 
     NSFItemQuery(
-      hdl, item_bid, name.data(), name.size(), &name_len, nullptr, nullptr,
-      reinterpret_cast<BLOCKID*>(&value_bid), &value_len
+      hdl, item_bid, name.data(), name.size(), &name_len, nullptr, nullptr, &value_bid, &value_len
     );
     name.resize(name_len);
 
     auto converted = name.to_string();
-    auto owner = std::make_shared<dmn::note>(*this);
     dmn::item_value val{*this, std::move(name)};
 
     if (!pattern || std::regex_match(converted, *pattern)) {
@@ -218,7 +216,7 @@ auto note::items(std::optional<std::regex> pattern) const -> value_map_t {
 
 void note::get_info_impl(dmn::info key, void* out) const {
   constexpr static uint16_t INFO_MASK = 0x8000;
-  auto raw_info = std::to_underlying(key) & ~INFO_MASK;
+  const auto raw_info = std::to_underlying(key) & ~INFO_MASK;
   NSFNoteGetInfo(get_handle(), raw_info, out);
 }
 
@@ -244,8 +242,7 @@ void note::modify_impl(
     throw dmn::invalid_argument("Provided key doesn't exist on note");
   }
 
-  const auto info = val->get_info();
-  const auto bid = std::bit_cast<BLOCKID>(info.item_bid);
+  const auto bid = val->item_bid_.convert<BLOCKID>();
   const auto data_type = std::to_underlying(type);
   flags |= get_flags(buffer.size());
 
@@ -262,7 +259,7 @@ auto note::get_handle() const -> handle_t {
   auto& store = detail::thread_context::current().get<dmn::note>();
   store.remove_stale();
 
-  auto* entry = store.find(state_);
+  const auto* entry = store.find(state_);
   if (entry != nullptr) {
     return entry->handle.get();
   }

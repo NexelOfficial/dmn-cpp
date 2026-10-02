@@ -1,5 +1,5 @@
 {
   "name": "dmn-cpp",
   "version-string": "1.0",
-  "dependencies": ["catch2"]
+  "dependencies": ["catch2", "polyhook2"]
 }

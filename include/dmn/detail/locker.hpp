@@ -17,10 +17,6 @@ enum class ownership : uint8_t {
   ///
   /// The handle is locked when acquired and unlocked when the owner is destroyed.
   borrow,
-  /// Takes ownership of the memory behind the handle.
-  ///
-  /// The handle is freed when the owner is destroyed. Does not lock or unlock the handle.
-  free
 };
 
 class locker : public detail::cursor {
@@ -96,10 +92,10 @@ class locker : public detail::cursor {
   /// Get the underlying block id.
   [[nodiscard]] auto get_block_id() const -> detail::block_id { return hdl_.get(); }
 
-  /// Get the underlying handle.
+  /// Checked access to the underlying handle.
   ///
   /// \note When the locker was created using a block id, the offset is lost.
-  [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return hdl_.get().pool; }
+  [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return hdl_.get().handle(); }
 
  private:
   detail::uhandle<detail::block_id> hdl_;

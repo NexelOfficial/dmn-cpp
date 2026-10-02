@@ -7,6 +7,7 @@
 
 #include <cstring>
 
+#include "dmn/detail/data_types.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/time_date.hpp"
 #include "dmn/error.hpp"
@@ -16,7 +17,7 @@ using dmn::item_value;
 using dmn::value;
 using dmn::value_impl;
 
-auto value_impl::empty() const noexcept -> bool { return size() <= 2; }
+auto value_impl::empty() const -> bool { return size() <= 2; }
 
 auto value_impl::get_type() const -> dmn::type {
   if (size() < 2) {
@@ -54,9 +55,9 @@ auto value_impl::as_string() const -> std::optional<std::string> {
     return std::string(buffer.data(), ptr);
   }
   if (typ == dmn::type::time && data_size == sizeof(dmn::time_date)) {
-    const auto td = obj.read<TIMEDATE>();
     std::string output(MAXALPHATIMEDATE + 1, '\0');
-    auto res = ConvertTIMEDATEtoRFC3339Date(&td, output.data(), MAXALPHATIMEDATE);
+    const auto td = obj.read<TIMEDATE>();
+    const auto res = ConvertTIMEDATEtoRFC3339Date(&td, output.data(), MAXALPHATIMEDATE);
     if (res != NOERROR) {
       return std::nullopt;
     }
@@ -97,23 +98,48 @@ value::value(detail::locker locker) : hdl_(OSMemFree) {
   }
 
   size_ = locker.size();
-  hdl_.put(locker.release().pool);
+  hdl_.put(locker.release().handle());
 }
 
+struct item_value::handles {
+  BLOCKID item;
+  BLOCKID value;
+  DWORD size;
+};
+
 item_value::item_value(dmn::note note, dmn::lmbcs item)
-    : note_(std::make_shared<dmn::note>(std::move(note))), item_(std::move(item)) {};
-
-auto item_value::get_info() const -> item_info {
-  item_info info{};
-  uint16_t item_type = 0;
-
-  auto* item_ptr = reinterpret_cast<BLOCKID*>(&info.item_bid);
-  auto* value_ptr = reinterpret_cast<BLOCKID*>(&info.value_bid);
-  auto* size_ptr = reinterpret_cast<DWORD*>(&info.value_size);
-
+    : note_(std::make_shared<dmn::note>(std::move(note))), item_(std::move(item)) {
+  handles hdls{};
   const dmn::status result = NSFItemInfo(
-    note_->get_handle(), item_.c_str(), item_.size(), item_ptr, &item_type, value_ptr, size_ptr
+    note_->get_handle(), item_.c_str(), item_.size(), &hdls.item, nullptr, &hdls.value, &hdls.size
   );
   result.throw_if_error("Failed to obtain item information");
-  return info;
+  apply_handles(hdls);
+}
+
+auto item_value::next() -> bool { return move_impl(true); }
+
+auto item_value::previous() -> bool { return move_impl(false); }
+
+auto item_value::move_impl(bool forward) -> bool {
+  handles hdls{};
+  const auto func = forward ? NSFItemInfoNext : NSFItemInfoPrev;
+
+  const dmn::status result = std::invoke(
+    func, note_->get_handle(), item_bid_.convert<BLOCKID>(), item_.c_str(),
+    detail::checked_cast<uint16_t>(item_.size()), &hdls.item, nullptr, &hdls.value, &hdls.size
+  );
+  if (result.is_not_found()) {
+    return false;
+  }
+  result.throw_if_error("Failed to obtain next item information");
+
+  apply_handles(hdls);
+  return true;
+}
+
+void item_value::apply_handles(handles hdls) {
+  item_bid_ = detail::block_id{hdls.item};
+  value_bid_ = detail::block_id{hdls.value};
+  size_ = hdls.size;
 }
