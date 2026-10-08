@@ -3,11 +3,11 @@
 #include <cstdint>
 #include <cstddef>
 #include <optional>
-#include <string>
 
 #include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/runtime.hpp"
 #include "dmn/list.hpp"
+#include "dmn/messaging/mime.hpp"
 
 namespace dmn {
 /// Mail message being composed for delivery.
@@ -19,42 +19,32 @@ class mail : protected detail::runtime {
  public:
   /// Create a new mail message.
   ///
-  /// Opens or creates a mail message file and creates a new message within it.
-  ///
   /// \param mailbox Mailbox to create the message in. Defaults to "mail.box".
-  static auto create(std::optional<std::string_view> mailbox = std::nullopt) -> mail;
+  explicit mail(std::optional<std::string_view> mailbox = {});
 
-  /// Set the message body.
+  /// Append data to the message body.
   ///
-  /// Writes the body as MIME content using the specified content type. If no content type is
-  /// provided, `text/html` is used.
-  ///
-  /// \param body Message body content.
-  /// \param content_type MIME content type to use.
-  /// \throws dmn::mime_error If writing the MIME content fails.
-  void set_body(std::string body, std::string content_type = "text/html") const;
+  /// \throws dmn::mime_error If writing the content fails.
+  auto operator<<(std::string_view buffer) -> mail&;
 
   /// Add a primary recipient.
   ///
-  /// \param email Recipient email address.
+  /// \param email Recipient e-mail address.
   void add_send_to(std::string_view email);
 
   /// Add a carbon-copy recipient.
   ///
-  /// \param email Recipient email address.
+  /// \param email Recipient e-mail address.
   void add_copy_to(std::string_view email);
 
   /// Add a blind carbon-copy recipient.
   ///
-  /// \param email Recipient email address.
+  /// \param email Recipient e-mail address.
   void add_blind_copy_to(std::string_view email);
 
   /// Send the message.
   ///
-  /// Adds recipient and header information, transfers ownership of mail handles to Domino, and
-  /// submits the message for delivery.
-  ///
-  /// \param from Sender email address.
+  /// \param from Sender e-mail address.
   /// \param subject Message subject.
   /// \throws dmn::runtime_error If no recipients were added to the mail.
   void send(std::string_view from, std::string_view subject);
@@ -64,6 +54,7 @@ class mail : protected detail::runtime {
  private:
   detail::scoped_handle<detail::dhandle_t> file_hdl_;
   detail::scoped_handle<detail::dhandle_t> msg_hdl_;
+  std::optional<dmn::omimestream> body_;
 
   dmn::list send_to_;
   dmn::list copy_to_;
@@ -75,7 +66,5 @@ class mail : protected detail::runtime {
 
   /// Internal implementation used by add-functions.
   void add_to_list(dmn::list& list, std::string_view email);
-
-  mail();
 };
 }  // namespace dmn

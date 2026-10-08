@@ -1,60 +1,176 @@
+
 #include "dmn/messaging/mime.hpp"
 
 #include <domino/global.h>
 #include <domino/nsf.h>
 #include <domino/mime.h>
 
-#include <format>
+#include <array>
+#include <span>
+#include <string>
 #include <utility>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/error.hpp"
 
-using dmn::mime;
+using dmn::imimestream;
+using dmn::mimestream;
+using dmn::omimestream;
 
-static_assert(sizeof(dmn::mime::handle_t) == sizeof(MIMEHANDLE));
+static_assert(sizeof(dmn::mimestream::handle_t) == sizeof(MIMEHANDLE));
 
-auto mime::set_content_type(std::string content_type) -> mime& {
-  content_type_ = std::move(content_type);
-  return *this;
-}
-
-auto mime::set_charset(std::string charset) -> mime& {
-  charset_ = std::move(charset);
-  return *this;
-}
-
-auto mime::append_content(std::string content) -> mime& {
-  content_.push_back(std::move(content));
-  return *this;
-}
-
-auto mime::open_impl(detail::dhandle_t handle) -> handle_t {
-  handle_t mime_hdl = {};
-  const dmn::status result = MIMEStreamOpen(handle, nullptr, 0, MIME_STREAM_OPEN_WRITE, &mime_hdl);
+auto mimestream::open_impl(detail::dhandle_t note_handle, const dmn::lmbcs& item, bool is_write)
+  -> detail::scoped_handle<handle_t> {
+  handle_t mime_handle = {};
+  const auto flags = is_write ? MIME_STREAM_OPEN_WRITE : MIME_STREAM_OPEN_READ;
+  const dmn::status result = MIMEStreamOpen(
+    note_handle, const_cast<char*>(item.c_str()), item.size(), flags, &mime_handle
+  );
   result.throw_if_error("Failed to open MIME stream");
-
-  return mime_hdl;
+  return detail::scoped_handle<handle_t>(mime_handle, MIMEStreamClose);
 }
 
-void mime::write_to_impl(detail::dhandle_t handle, std::string field) const {
-  write_line(std::format("Content-Type: {}; charset={}", content_type_, charset_));
-  write_line("Content-Transfer-Encoding: 8bit");
-  write_line("");
+mimestream::mimestream(detail::dhandle_t note_handle, dmn::lmbcs item, bool is_write)
+    : hdl_(open_impl(note_handle, item, is_write)), item_(std::move(item)) {}
 
-  for (const auto& line : content_) {
-    write_line(line);
+auto imimestream::get() -> int {
+  if (position_ == size_ && !next_chunk()) {
+    return EOF;
   }
 
-  const dmn::status result =
-    MIMEStreamItemize(handle, field.data(), field.size(), MIME_STREAM_ITEMIZE_FULL, hdl_.get());
-  result.throw_if_error("Failed to append mime item to note");
+  return buffer_.at(position_++);
 }
 
-void mime::write_line(std::string line) const {
-  const int error = MIMEStreamPutLine(line.data(), hdl_.get());
+auto imimestream::next_chunk() -> bool {
+  if (eof_) {
+    return false;
+  }
+
+  uint32_t count = 0;
+  const int error = MIMEStreamRead(buffer_.data(), &count, buffer_.size(), get_handle());
+  if (error != MIME_STREAM_SUCCESS && error != MIME_STREAM_EOS) {
+    failed_ = true;
+    throw dmn::mime_error::make("Failed to read from MIME stream", error);
+  }
+
+  position_ = 0;
+  size_ = count;
+  if (error == MIME_STREAM_EOS || count == 0) {
+    eof_ = true;
+  }
+
+  return count != 0;
+}
+
+auto imimestream::operator>>(std::string& out) -> imimestream& {
+  out.clear();
+  if (failed_) {
+    return *this;
+  }
+
+  int ch = get();
+  while (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n') {
+    ch = get();
+  }
+
+  while (ch != EOF && ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n') {
+    out.push_back(static_cast<char>(ch));
+    ch = get();
+  }
+
+  if (ch != EOF) {
+    --position_;
+  }
+  if (out.empty()) {
+    failed_ = true;
+  }
+
+  return *this;
+}
+
+auto imimestream::getline(std::string& out) -> imimestream& {
+  out.clear();
+  if (failed_) {
+    return *this;
+  }
+
+  int ch = get();
+  while (ch != EOF && ch != '\n') {
+    out.push_back(static_cast<char>(ch));
+    ch = get();
+  }
+
+  if (ch == '\n' && out.ends_with('\r')) {
+    out.pop_back();
+  }
+  if (ch == EOF && out.empty()) {
+    failed_ = true;
+  }
+
+  return *this;
+}
+
+auto imimestream::read(std::span<char> buffer) -> size_t {
+  if (failed_) {
+    return 0;
+  }
+
+  size_t count = 0;
+  for (auto& ch : buffer) {
+    const int value = get();
+    if (value == EOF) {
+      break;
+    }
+
+    ch = static_cast<char>(value);
+    ++count;
+  }
+
+  if (count == 0 && !buffer.empty()) {
+    failed_ = true;
+  }
+  
+  return count;
+}
+
+auto omimestream::operator<<(header hdr) -> omimestream& {
+  if (has_content_) {
+    throw dmn::runtime_error("Header is written after content");
+  }
+
+  const auto line = std::move(hdr.key) + ": " + std::move(hdr.value) + "\r\n";
+  return write(line);
+}
+
+auto omimestream::operator<<(std::string_view buffer) -> omimestream& {
+  if (!has_content_) {
+    write("\r\n");
+    has_content_ = true;
+  }
+
+  return write(buffer);
+}
+
+void mimestream::finalize_impl(detail::dhandle_t note_handle) {
+  if (get_handle() == handle_t{}) {
+    throw dmn::runtime_error("No active MIME stream to finalize");
+  }
+
+  auto& item = get_item();
+  const dmn::status result = MIMEStreamItemize(
+    note_handle, item.data(), item.size(), MIME_STREAM_ITEMIZE_FULL, get_handle()
+  );
+  result.throw_if_error("Failed to finalize mime stream to note item");
+}
+
+auto omimestream::write(std::string_view buffer) -> omimestream& {
+  const int error = MIMEStreamWrite(
+    reinterpret_cast<unsigned char*>(const_cast<char*>(buffer.data())),
+    static_cast<unsigned int>(buffer.size()), get_handle()
+  );
+
   if (error != MIME_STREAM_SUCCESS) {
-    throw dmn::mime_error::make("Failed to append line to mime stream", error);
+    throw dmn::mime_error::make("Failed to append data to mime stream", error);
   }
+  return *this;
 }
-
-mime::mime(handle_t handle) : hdl_(handle, MIMEStreamClose) {};
