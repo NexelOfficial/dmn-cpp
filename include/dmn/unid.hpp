@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cstdint>
 #include <optional>
 #include <array>
+#include <cstdint>
 #include <string>
 
 struct UNIVERSALNOTEID_tag;
@@ -27,9 +27,7 @@ struct unid {
   /// Cast to raw UNIVERSALNOTEID structure.
   [[nodiscard]] auto as_raw_unid() noexcept -> UNIVERSALNOTEID_tag*;
 
-  auto operator==(unid other) const noexcept -> bool {
-    return file == other.file && note == other.note;
-  }
+  auto operator==(const unid& other) const noexcept -> bool = default;
 };
 
 struct oid {
@@ -37,10 +35,7 @@ struct oid {
   uint32_t sequence;
   std::array<uint32_t, 2> sequence_time;
 
-  auto operator==(oid other) const noexcept -> bool {
-    return universalid == other.universalid && sequence == other.sequence &&
-           sequence_time == other.sequence_time;
-  }
+  auto operator==(const oid& other) const noexcept -> bool = default;
 };
 
 struct note_id {
@@ -55,7 +50,7 @@ struct note_id {
   constexpr note_id(value_t id) noexcept : value(id) {};
   constexpr note_id() noexcept : value(0) {};
 
-  auto operator==(note_id other) const noexcept -> bool { return value == other.value; }
+  auto operator==(const note_id& other) const noexcept -> bool = default;
 
   /// Get pointer to underlying id value.
   constexpr auto data() noexcept -> value_t* { return &value; }

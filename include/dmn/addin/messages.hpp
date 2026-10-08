@@ -3,8 +3,8 @@
 #include <string>
 #include <optional>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
 class addin;
@@ -32,7 +32,7 @@ class messages : private detail::runtime {
   [[nodiscard]] auto get_message() const -> std::optional<std::string>;
 
  private:
-  detail::uhandle<handle_t> hdl_;
+  detail::scoped_handle<handle_t> hdl_;
 
   messages(handle_t handle);
 };

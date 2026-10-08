@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
 template <typename T>
@@ -65,7 +65,7 @@ class mime : protected detail::runtime {
   }
 
  private:
-  detail::uhandle<handle_t> hdl_;
+  detail::scoped_handle<handle_t> hdl_;
   std::vector<std::string> content_;
   std::string charset_ = "UTF-8";
   std::string content_type_ = "text/html; charset=UTF-8";

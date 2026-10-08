@@ -26,6 +26,9 @@ struct thread {
 };
 
 class runtime {
+ public:
+  auto operator==(const runtime&) const noexcept -> bool = default;
+
  protected:
   runtime() { session::instance(); }
 };

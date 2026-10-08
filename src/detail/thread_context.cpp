@@ -23,8 +23,8 @@ thread_context::thread_context() {
 
 thread_context::~thread_context() noexcept {
   storage_.clear();
-  set_current(nullptr);
   NotesTermThread();
+  set_current(nullptr);
 }
 
 auto thread_context::current() -> thread_context& {

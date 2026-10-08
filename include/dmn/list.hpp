@@ -5,9 +5,9 @@
 #include <span>
 #include <string>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
 namespace detail {
@@ -28,21 +28,19 @@ class list : protected detail::runtime {
     const_iterator(const list* owner, size_t index) : owner_(owner), index_(index) {}
 
     auto operator*() const -> std::string { return owner_->at(index_); }
+
     auto operator++() -> const_iterator& {
       ++index_;
       return *this;
     }
+
     auto operator++(int) -> const_iterator {
       auto copy = *this;
       ++(*this);
       return copy;
     }
-    friend auto operator==(const const_iterator& lhs, const const_iterator& rhs) -> bool {
-      return lhs.owner_ == rhs.owner_ && lhs.index_ == rhs.index_;
-    }
-    friend auto operator!=(const const_iterator& lhs, const const_iterator& rhs) -> bool {
-      return !(lhs == rhs);
-    }
+
+    auto operator==(const const_iterator& other) const noexcept -> bool = default;
 
    private:
     const list* owner_{};
@@ -97,7 +95,7 @@ class list : protected detail::runtime {
   [[nodiscard]] auto get_handle() const -> detail::dhandle_t { return hdl_.get(); }
 
  private:
-  detail::uhandle<detail::dhandle_t> hdl_;
+  detail::scoped_handle<detail::dhandle_t> hdl_;
   uint16_t size_ = 0;
 
   list(std::span<std::byte> buffer);

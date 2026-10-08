@@ -37,7 +37,7 @@ static_assert(alignof(dmn::design::view_table_format2) == alignof(VIEW_TABLE_FOR
 
 namespace {
 auto make_item_name(uint16_t sequence) -> dmn::lmbcs {
-  auto name = "$" + std::to_string(sequence);
+  const auto name = "$" + std::to_string(sequence);
   return {std::string_view{name}};
 }
 }  // namespace
@@ -69,12 +69,10 @@ auto view::create(const dmn::database& db, std::string_view title) -> view {
   }
 
   auto note = db.create_note();
+  note.set_type(dmn::note::type::view);
   note.set(VIEW_TITLE_ITEM, title);
   note.set(DESIGN_FLAGS, "PY");
   note.set("$Generator", "dmn-cpp");
-
-  uint16_t note_class = NOTE_CLASS_VIEW;
-  NSFNoteSetInfo(note.get_handle(), _NOTE_CLASS, &note_class);
 
   view out{std::move(note)};
   out.selection_ = dmn::formula{"@All"};
@@ -182,7 +180,7 @@ auto view::build_view_format() -> dmn::value {
     locker.write(current.format2_, ods::type::view_column_format2);
   }
 
-  return {std::move(locker)};
+  return dmn::value{std::move(locker)};
 }
 
 auto view::build_collation() const -> dmn::value {
@@ -230,5 +228,5 @@ auto view::build_collation() const -> dmn::value {
     locker.write(std::span{item_name.c_str(), item_name.size()});
   }
 
-  return {std::move(locker)};
+  return dmn::value{std::move(locker)};
 }

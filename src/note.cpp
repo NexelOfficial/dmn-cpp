@@ -19,6 +19,22 @@ using dmn::note;
 
 static_assert(sizeof(note::handle_t) == sizeof(NOTEHANDLE));
 
+static_assert(std::to_underlying(note::type::none) == NOTE_CLASS_NONE);
+static_assert(std::to_underlying(note::type::document) == NOTE_CLASS_DOCUMENT);
+static_assert(std::to_underlying(note::type::info) == NOTE_CLASS_INFO);
+static_assert(std::to_underlying(note::type::form) == NOTE_CLASS_FORM);
+static_assert(std::to_underlying(note::type::view) == NOTE_CLASS_VIEW);
+static_assert(std::to_underlying(note::type::icon) == NOTE_CLASS_ICON);
+static_assert(std::to_underlying(note::type::design) == NOTE_CLASS_DESIGN);
+static_assert(std::to_underlying(note::type::acl) == NOTE_CLASS_ACL);
+static_assert(std::to_underlying(note::type::help_index) == NOTE_CLASS_HELP_INDEX);
+static_assert(std::to_underlying(note::type::help) == NOTE_CLASS_HELP);
+static_assert(std::to_underlying(note::type::filter) == NOTE_CLASS_FILTER);
+static_assert(std::to_underlying(note::type::field) == NOTE_CLASS_FIELD);
+static_assert(std::to_underlying(note::type::replformula) == NOTE_CLASS_REPLFORMULA);
+static_assert(std::to_underlying(note::type::priv) == NOTE_CLASS_PRIVATE);
+static_assert(std::to_underlying(note::type::def) == NOTE_CLASS_DEFAULT);
+
 namespace {
 struct scan_context {
   std::optional<std::regex> pattern;
@@ -52,7 +68,7 @@ auto note::open_impl() const -> std::optional<handle_t> {
   }
   result.throw_if_error("Failed to open note");
 
-  detail::uhandle<handle_t> managed{handle, NSFNoteClose};
+  detail::scoped_handle<handle_t> managed{handle, NSFNoteClose};
   return store.insert(state_, std::move(managed)).handle.get();
 }
 
@@ -68,6 +84,9 @@ auto note::open(dmn::database db, dmn::note_id note_id) -> std::optional<note> {
 auto note::open(dmn::database db, dmn::unid unid) -> std::optional<note> {
   handle_t handle = {};
   const dmn::status result = NSFNoteOpenByUNID(db.get_handle(), unid.as_raw_unid(), 0, &handle);
+  if (result.is_not_found()) {
+    return std::nullopt;
+  }
   result.throw_if_error("Failed to open note");
 
   dmn::note_id note_id{};
@@ -83,7 +102,7 @@ auto note::create(dmn::database db) -> note {
   uint16_t note_class = NOTE_CLASS_DOCUMENT;
   NSFNoteSetInfo(handle, _NOTE_CLASS, &note_class);
 
-  detail::uhandle<handle_t> managed{handle, NSFNoteClose};
+  detail::scoped_handle<handle_t> managed{handle, NSFNoteClose};
   return note({.db = std::move(db), .hdl = std::move(managed)});
 }
 
@@ -183,7 +202,7 @@ auto note::items(std::optional<std::regex> pattern) const -> value_map_t {
 
   value_map_t output{};
   while (!result.is_not_found()) {
-    detail::block_id value_bid{};
+    BLOCKID value_bid{};
     uint16_t name_len = 0;
     DWORD value_len = 0;
 
@@ -191,16 +210,13 @@ auto note::items(std::optional<std::regex> pattern) const -> value_map_t {
     name.resize(MAX_FIELD_NAME_LEN);
 
     NSFItemQuery(
-      hdl, item_bid, name.data(), name.size(), &name_len, nullptr, nullptr,
-      reinterpret_cast<BLOCKID*>(&value_bid), &value_len
+      hdl, item_bid, name.data(), name.size(), &name_len, nullptr, nullptr, &value_bid, &value_len
     );
     name.resize(name_len);
 
     auto converted = name.to_string();
-    auto owner = std::make_shared<dmn::note>(*this);
-    dmn::item_value val{*this, std::move(name)};
-
     if (!pattern || std::regex_match(converted, *pattern)) {
+      dmn::item_value val{*this, std::move(name)};
       output.emplace(std::move(converted), std::move(val));
     }
 
@@ -216,10 +232,14 @@ auto note::items(std::optional<std::regex> pattern) const -> value_map_t {
   return output;
 }
 
-void note::get_info_impl(dmn::info key, void* out) const {
+void note::set_type(note::type typ) const {
+  NSFNoteSetInfo(get_handle(), std::to_underlying(dmn::info::type), &typ);
+}
+
+void note::get_info_impl(dmn::info key, void* input) const {
   constexpr static uint16_t INFO_MASK = 0x8000;
-  auto raw_info = std::to_underlying(key) & ~INFO_MASK;
-  NSFNoteGetInfo(get_handle(), raw_info, out);
+  const auto raw_info = std::to_underlying(key) & ~INFO_MASK;
+  NSFNoteGetInfo(get_handle(), raw_info, input);
 }
 
 void note::append_impl(
@@ -244,8 +264,7 @@ void note::modify_impl(
     throw dmn::invalid_argument("Provided key doesn't exist on note");
   }
 
-  const auto info = val->get_info();
-  const auto bid = std::bit_cast<BLOCKID>(info.item_bid);
+  const auto bid = val->item_bid_.convert<BLOCKID>();
   const auto data_type = std::to_underlying(type);
   flags |= get_flags(buffer.size());
 
@@ -262,7 +281,7 @@ auto note::get_handle() const -> handle_t {
   auto& store = detail::thread_context::current().get<dmn::note>();
   store.remove_stale();
 
-  auto* entry = store.find(state_);
+  const auto* entry = store.find(state_);
   if (entry != nullptr) {
     return entry->handle.get();
   }
@@ -272,6 +291,6 @@ auto note::get_handle() const -> handle_t {
     NSFNoteOpen(state_->db.get_handle(), state_->note_id.value, 0, &handle);
   result.throw_if_error("Failed to open note");
 
-  detail::uhandle<handle_t> managed{handle, NSFNoteClose};
+  detail::scoped_handle<handle_t> managed{handle, NSFNoteClose};
   return store.insert(state_, std::move(managed)).handle.get();
 }

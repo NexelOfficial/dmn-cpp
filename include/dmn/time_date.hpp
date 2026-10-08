@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cstdint>
 #include <array>
 #include <chrono>
+#include <cstdint>
 #include <optional>
 
 #include "dmn/detail/runtime.hpp"
@@ -29,6 +29,6 @@ struct time_date : protected detail::runtime {
   /// Cast to raw TIMEDATE structure.
   [[nodiscard]] auto as_raw_time_date() noexcept -> tagTIMEDATE*;
 
-  auto operator==(time_date other) const noexcept -> bool { return innards == other.innards; }
+  auto operator==(const time_date& other) const noexcept -> bool = default;
 };
 }  // namespace dmn
