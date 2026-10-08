@@ -21,7 +21,7 @@ class role {
 
   [[nodiscard]] auto name() const noexcept -> std::string_view { return name_; }
 
-  friend auto operator==(const role&, const role&) -> bool = default;
+  auto operator==(const role&) const -> bool = default;
 
  private:
   std::string name_;
@@ -70,13 +70,7 @@ class role_map : private detail::runtime {
       return copy;
     }
 
-    friend auto operator==(const const_iterator& lhs, const const_iterator& rhs) -> bool {
-      return lhs.owner_ == rhs.owner_ && lhs.index_ == rhs.index_;
-    }
-
-    friend auto operator!=(const const_iterator& lhs, const const_iterator& rhs) -> bool {
-      return !(lhs == rhs);
-    }
+    auto operator==(const const_iterator&) const noexcept -> bool = default;
 
    private:
     void skip_empty() {

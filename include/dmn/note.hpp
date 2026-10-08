@@ -10,8 +10,8 @@
 
 #include "dmn/detail/note_value.hpp"
 #include "dmn/detail/object_value.hpp"
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 #include "dmn/flags.hpp"
 #include "dmn/value.hpp"
 #include "dmn/lmbcs.hpp"
@@ -31,10 +31,29 @@ class note : protected detail::runtime {
  public:
   using value_map_t = std::unordered_map<std::string, dmn::item_value>;
   using handle_t = detail::dhandle_t;
+
   struct state {
     dmn::database db;
     dmn::note_id note_id;
-    std::optional<detail::uhandle<handle_t>> hdl;
+    std::optional<detail::scoped_handle<handle_t>> hdl;
+  };
+
+  enum class type : uint16_t {
+    none = 0x0000,
+    document = 0x0001,
+    info = 0x0002,
+    form = 0x0004,
+    view = 0x0008,
+    icon = 0x0010,
+    design = 0x0020,
+    acl = 0x0040,
+    help_index = 0x0080,
+    help = 0x0100,
+    filter = 0x0200,
+    field = 0x0400,
+    replformula = 0x0800,
+    priv = 0x1000,
+    def = 0x8000,
   };
 
   note() = delete;
@@ -126,9 +145,12 @@ class note : protected detail::runtime {
       return value.try_as<T>();
     } else if constexpr (std::is_same_v<T, dmn::item_value>) {
       return dmn::item_value{*this, key};
-    }
+    } 
     return std::nullopt;
   }
+
+  /// Set the type (class) for this note.
+  void set_type(note::type typ) const;
 
   /// Get information about the note.
   ///
@@ -147,6 +169,10 @@ class note : protected detail::runtime {
       dmn::oid value{};
       get_info_impl(dmn::info::oid, &value);
       return value.universalid;
+    } else if constexpr (Info == dmn::info::type) {
+      dmn::type value{};
+      get_info_impl(dmn::info::type, &value);
+      return value;
     } else {
       static_assert(note::always_false_info<Info>, "Unsupported type for get_info");
     }
@@ -158,14 +184,14 @@ class note : protected detail::runtime {
 
  private:
   std::shared_ptr<state> state_;
-  note(state st) : state_(std::make_shared<state>(std::move(st))) {};
+  explicit note(state st) : state_(std::make_shared<state>(std::move(st))) {};
 
   [[nodiscard]] auto open_impl() const -> std::optional<handle_t>;
   static auto open(dmn::database db, dmn::unid unid) -> std::optional<note>;
   static auto open(dmn::database db, dmn::note_id note_id) -> std::optional<note>;
   static auto create(dmn::database db) -> note;
 
-  void get_info_impl(dmn::info key, void* out) const;
+  void get_info_impl(dmn::info key, void* input) const;
 
   void append_impl(
     std::string_view key, dmn::type type, std::span<const std::byte> buffer, uint16_t flags

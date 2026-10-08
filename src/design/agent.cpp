@@ -74,8 +74,7 @@ auto agent::create(const dmn::database& db, std::string_view title) -> agent {
   }
 
   auto note = db.create_note();
-  uint16_t note_class = NOTE_CLASS_FILTER;
-  NSFNoteSetInfo(note.get_handle(), _NOTE_CLASS, &note_class);
+  note.set_type(dmn::note::type::filter);
 
   auto assist_flags = std::string{ASSIST_FLAG_ENABLED} + std::string{ASSIST_FLAG_AGENT_RUNASSIGNER};
   note.set(ASSIST_FLAGS_ITEM, assist_flags, dmn::item_flag::sign);

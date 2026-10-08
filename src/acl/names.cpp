@@ -5,7 +5,7 @@
 #include <domino/acl.h>
 #include <domino/nsf.h>
 
-#include "dmn/detail/uhandle.hpp"
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/lmbcs.hpp"
 #include "dmn/error.hpp"

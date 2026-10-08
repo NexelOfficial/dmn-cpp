@@ -58,7 +58,7 @@ class attached_object : private detail::runtime {
  private:
   type object_type_;
   dmn::database db_;
-  detail::uhandle<handle_t> hdl_;
+  detail::scoped_handle<handle_t> hdl_;
 
   /// Internal implementation used by `dmn::database`.
   static auto open(const dmn::database& db, std::string_view name) -> std::optional<agent>;

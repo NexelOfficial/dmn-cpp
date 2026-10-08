@@ -6,9 +6,10 @@
 #include <utility>
 
 #include "dmn/detail/block.hpp"
-#include "dmn/detail/uhandle.hpp"
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/object_value.hpp"
 #include "dmn/detail/locker.hpp"
+#include "dmn/error.hpp"
 #include "dmn/type.hpp"
 
 namespace dmn {
@@ -29,7 +30,7 @@ class value_impl : protected detail::runtime {
   ///
   /// A value is considered empty when its size is two bytes or less. At that point it's
   /// either completely empty or only has a type but no data.
-  [[nodiscard]] auto empty() const noexcept -> bool;
+  [[nodiscard]] auto empty() const -> bool;
 
   /// Extract the type of the value.
   [[nodiscard]] auto get_type() const -> dmn::type;
@@ -91,6 +92,8 @@ class value_impl : protected detail::runtime {
   /// Get the size of the underlying memroy.
   [[nodiscard]] virtual auto size() const -> size_t = 0;
 
+  auto operator==(const value_impl&) const noexcept -> bool = default;
+
  private:
   [[nodiscard]] auto data_pair() const -> std::pair<dmn::type, detail::locker>;
 
@@ -109,7 +112,7 @@ class value final : public value_impl {
   ///
   /// \param locker Instance of `detail::locker` holding the raw memory.
   /// \throws dmn::invalid_argument If the locker does not own the memory.
-  value(detail::locker locker);
+  explicit value(detail::locker locker);
 
   [[nodiscard]] auto get_cursor() const -> detail::locker override {
     return {hdl_.get(), size_, detail::ownership::borrow};
@@ -118,7 +121,7 @@ class value final : public value_impl {
   [[nodiscard]] auto size() const -> size_t override { return size_; }
 
  private:
-  detail::uhandle<handle_t> hdl_;
+  detail::scoped_handle<handle_t> hdl_;
   size_t size_;
 };
 
@@ -126,10 +129,10 @@ class value final : public value_impl {
 ///
 /// \throws dmn::invalid_handle If an underlying handle is empty.
 /// \throws dmn::native_error In case of a lower level failure.
-/// \note Thread-safe.
 class item_value final : public value_impl {
  public:
   using handle_t = detail::dhandle_t;
+  item_value() = default;
 
   /// Create item value from note and item.
   ///
@@ -137,24 +140,39 @@ class item_value final : public value_impl {
   /// \param item Item name to use in the item value.
   item_value(dmn::note note, dmn::lmbcs item);
 
+  /// Go to the next item with the same name.
+  ///
+  /// \return True if a new item sits inside the item value; false otherwise.
+  [[nodiscard]] auto next() -> bool;
+
+  /// Go to the previous item with the same name.
+  ///
+  /// \return True if a new item sits inside the item value; false otherwise.
+  [[nodiscard]] auto previous() -> bool;
+
   [[nodiscard]] auto get_cursor() const -> detail::locker override {
-    const auto info = get_info();
-    return {info.value_bid, info.value_size, detail::ownership::borrow};
+    return {value_bid_, size_, detail::ownership::borrow};
   }
 
-  [[nodiscard]] auto size() const -> size_t override { return get_info().value_size; }
+  [[nodiscard]] auto size() const -> size_t override { return size_; }
+
+  [[nodiscard]] auto block_id() const -> const detail::block_id& { return value_bid_; }
+  [[nodiscard]] auto block_id() -> detail::block_id& { return value_bid_; }
+
+  auto operator==(const item_value& other) const -> bool = default;
 
  private:
-  struct item_info {
-    detail::block_id item_bid;
-    detail::block_id value_bid;
-    uint32_t value_size;
-  };
-
   std::shared_ptr<dmn::note> note_;
   dmn::lmbcs item_;
 
-  [[nodiscard]] auto get_info() const -> item_info;
+  detail::block_id item_bid_{};
+  detail::block_id value_bid_{};
+  uint32_t size_ = 0;
+
+  struct handles;
+  void apply_handles(handles hdls);
+
+  [[nodiscard]] auto move_impl(bool forward) -> bool;
 
   friend class dmn::note;
 };

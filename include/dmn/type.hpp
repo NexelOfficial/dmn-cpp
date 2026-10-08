@@ -49,6 +49,7 @@ enum class type : uint16_t {
 enum class info : uint16_t {
   note_id = 1U,
   oid = 2U,
+  type = 3U,
   unid = 2U | 0x8000U,
 };
 }  // namespace dmn

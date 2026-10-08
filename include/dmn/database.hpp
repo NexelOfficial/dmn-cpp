@@ -5,8 +5,8 @@
 #include <optional>
 #include <vector>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 #include "dmn/acl/names.hpp"
 #include "dmn/dql.hpp"
 #include "dmn/unid.hpp"

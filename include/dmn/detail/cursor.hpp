@@ -121,6 +121,9 @@ class cursor : protected detail::runtime {
   /// Get the size of the cursor memory.
   [[nodiscard]] auto size() const -> size_t { return buffer_.size(); }
 
+  /// Get the remaining size of the cursor.
+  [[nodiscard]] auto remaining() const -> size_t { return size() - offset_; }
+
  private:
   std::span<std::byte> buffer_;
   size_t offset_ = 0;

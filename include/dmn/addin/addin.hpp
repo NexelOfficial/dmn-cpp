@@ -5,8 +5,8 @@
 #include <optional>
 #include <functional>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 #include "dmn/lmbcs.hpp"
 
 namespace dmn {
@@ -76,7 +76,7 @@ class addin : private detail::runtime {
   static std::mutex mtx;
   static std::optional<dmn::lmbcs> prefix_;
 
-  detail::uhandle<detail::dhandle_t> status_hdl_;
+  detail::scoped_handle<detail::dhandle_t> status_hdl_;
 
   /// Internal implementation used by `dmn::addin::log`.
   static void log_impl(std::string_view text);

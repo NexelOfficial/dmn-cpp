@@ -2,9 +2,9 @@
 
 #include <string_view>
 
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/detail/locker.hpp"
 #include "dmn/detail/runtime.hpp"
-#include "dmn/detail/uhandle.hpp"
 
 namespace dmn {
 class lotusscript : protected detail::runtime {
@@ -27,7 +27,7 @@ class lotusscript : protected detail::runtime {
   [[nodiscard]] auto get_handle() const -> handle_t { return hdl_.get(); }
 
  private:
-  detail::uhandle<handle_t> hdl_;
+  detail::scoped_handle<handle_t> hdl_;
   size_t size_;
 };
 }  // namespace dmn

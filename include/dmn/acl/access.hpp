@@ -49,7 +49,7 @@ struct access {
     return std::ranges::find(roles, wanted) != roles.end();
   }
 
-  friend auto operator==(const access&, const access&) -> bool = default;
+  auto operator==(const access&) const -> bool = default;
 
   acl::level level{acl::level::noaccess};
   std::vector<acl::role> roles;
