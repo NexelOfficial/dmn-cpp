@@ -7,9 +7,9 @@
 #include <domino/osmem.h>
 #include <filesystem>
 #include <utility>
-#include <random>
 
 #include "dmn/detail/thread_context.hpp"
+#include "dmn/detail/random.hpp"
 #include "dmn/value.hpp"
 #include "dmn/error.hpp"
 #include "dmn/type.hpp"
@@ -133,17 +133,8 @@ void note::embed_element(std::string_view name, const std::filesystem::path& pat
 }
 
 void note::embed_element(const std::filesystem::path& path) const {
-  constexpr static uint8_t ATTACHMENT_NAME_LEN = 5;
-  constexpr static std::string_view RAND_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  static std::random_device rd{};
-  static std::mt19937 gen{rd()};
-
-  std::string rand_name;
-  for (size_t i = 0; i < ATTACHMENT_NAME_LEN; ++i) {
-    std::uniform_int_distribution<> distrib(0, RAND_CHARSET.size() - 1);
-    rand_name += RAND_CHARSET.at(distrib(gen));
-  }
-
+  constexpr uint8_t ATTACHMENT_NAME_LEN = 5;
+  const auto rand_name = detail::random_string(ATTACHMENT_NAME_LEN);
   const auto ext = path.has_extension() ? path.extension().string() : "";
   embed_element("ATT" + rand_name + ext, path);
 }
