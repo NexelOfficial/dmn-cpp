@@ -34,7 +34,6 @@ class mimestream : protected detail::runtime {
 
   [[nodiscard]] auto get_handle() -> handle_t { return hdl_.get(); }
   [[nodiscard]] auto get_item() -> dmn::lmbcs& { return item_; }
-  void finalize_impl(detail::dhandle_t note_handle);
 
  private:
   detail::scoped_handle<handle_t> hdl_;
@@ -102,6 +101,19 @@ class omimestream : public mimestream {
     }
   omimestream(const T& note, std::string_view item) : mimestream(note, item, true) {}
 
+  /// Make this MIME stream a multipart stream.
+  ///
+  /// \throws dmn::mime_error If writing the multipart header fails.
+  /// \throws dmn::runtime_error If the MIME object is already multipart.
+  /// \note This function must be called before writing content.
+  auto multipart() -> omimestream&;
+
+  /// Create a new part in the MIME stream.
+  ///
+  /// \throws dmn::mime_error If writing the boundary fails.
+  /// \throws dmn::runtime_error If the MIME object is not multipart.
+  auto boundary() -> omimestream&;
+
   /// Append a header to the MIME stream.
   ///
   /// \throws dmn::mime_error If writing the header fails.
@@ -112,6 +124,9 @@ class omimestream : public mimestream {
   ///
   /// \throws dmn::mime_error If writing the line failed.
   auto operator<<(std::string_view buffer) -> omimestream&;
+
+  /// Use manipulator on MIME stream.
+  auto operator<<(omimestream& (*manip)(omimestream&)) -> omimestream& { return manip(*this); }
 
   /// Finalize the MIME stream into a note item.
   ///
@@ -126,8 +141,15 @@ class omimestream : public mimestream {
   }
 
  private:
+  std::optional<std::string> boundary_;
   bool has_content_ = false;
+
+  void finalize_impl(detail::dhandle_t note_handle);
 
   auto write(std::string_view buffer) -> omimestream&;
 };
+
+inline auto multipart(omimestream& stream) -> omimestream& { return stream.multipart(); }
+
+inline auto boundary(omimestream& stream) -> omimestream& { return stream.boundary(); }
 }  // namespace dmn

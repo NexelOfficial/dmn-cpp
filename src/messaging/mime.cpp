@@ -21,11 +21,10 @@ static_assert(sizeof(dmn::mimestream::handle_t) == sizeof(MIMEHANDLE));
 
 auto mimestream::open_impl(detail::dhandle_t note_handle, const dmn::lmbcs& item, bool is_write)
   -> detail::scoped_handle<handle_t> {
-  handle_t mime_handle = {};
   const auto flags = is_write ? MIME_STREAM_OPEN_WRITE : MIME_STREAM_OPEN_READ;
-  const dmn::status result = MIMEStreamOpen(
-    note_handle, const_cast<char*>(item.c_str()), item.size(), flags, &mime_handle
-  );
+  handle_t mime_handle = {};
+  const dmn::status result =
+    MIMEStreamOpen(note_handle, const_cast<char*>(item.c_str()), item.size(), flags, &mime_handle);
   result.throw_if_error("Failed to open MIME stream");
   return detail::scoped_handle<handle_t>(mime_handle, MIMEStreamClose);
 }
@@ -50,7 +49,7 @@ auto imimestream::next_chunk() -> bool {
   const int error = MIMEStreamRead(buffer_.data(), &count, buffer_.size(), get_handle());
   if (error != MIME_STREAM_SUCCESS && error != MIME_STREAM_EOS) {
     failed_ = true;
-    throw dmn::mime_error::make("Failed to read from MIME stream", error);
+    throw dmn::mime_error("Failed to read from MIME stream");
   }
 
   position_ = 0;
@@ -129,8 +128,30 @@ auto imimestream::read(std::span<char> buffer) -> size_t {
   if (count == 0 && !buffer.empty()) {
     failed_ = true;
   }
-  
+
   return count;
+}
+
+auto omimestream::multipart() -> omimestream& {
+  if (boundary_) {
+    throw dmn::runtime_error("MIME stream is already of type multipart");
+  }
+
+  constexpr static uint8_t BOUNDARY_SIZE = std::numeric_limits<uint8_t>::max();
+  boundary_ = detail::random_string(BOUNDARY_SIZE);
+
+  const auto value = "multipart/mixed; boundary=\"" + *boundary_ + "\"";
+  return *this << dmn::header{{"Content-Type", value}};
+}
+
+auto omimestream::boundary() -> omimestream& {
+  if (!boundary_) {
+    throw dmn::runtime_error("MIME stream is not of type multipart");
+  }
+
+  write("\r\n--" + *boundary_ + "\r\n");
+  has_content_ = false;
+  return *this;
 }
 
 auto omimestream::operator<<(header hdr) -> omimestream& {
@@ -151,9 +172,13 @@ auto omimestream::operator<<(std::string_view buffer) -> omimestream& {
   return write(buffer);
 }
 
-void mimestream::finalize_impl(detail::dhandle_t note_handle) {
+void omimestream::finalize_impl(detail::dhandle_t note_handle) {
   if (get_handle() == handle_t{}) {
     throw dmn::runtime_error("No active MIME stream to finalize");
+  }
+
+  if (boundary_) {
+    write("\r\n--" + *boundary_ + "--");
   }
 
   auto& item = get_item();
@@ -170,7 +195,7 @@ auto omimestream::write(std::string_view buffer) -> omimestream& {
   );
 
   if (error != MIME_STREAM_SUCCESS) {
-    throw dmn::mime_error::make("Failed to append data to mime stream", error);
+    throw dmn::mime_error("Failed to append data to mime stream");
   }
   return *this;
 }

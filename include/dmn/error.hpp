@@ -103,16 +103,5 @@ struct native_error : error {
 
 struct mime_error : error {
   using error::error;
-
-  /// Make a variant of `dmn::mime_error` using its code.
-  static auto make(const char* message, int code) -> dmn::mime_error;
-};
-
-struct mime_io_error : mime_error {
-  using mime_error::mime_error;
-};
-
-struct mime_eos_error : mime_error {
-  using mime_error::mime_error;
 };
 }  // namespace dmn

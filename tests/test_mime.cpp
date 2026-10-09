@@ -76,6 +76,44 @@ TEST_CASE("mime object can be written and read", "[nos][mime]") {
   REQUIRE(imime.eof());
   REQUIRE(line.empty());
   REQUIRE(word.empty());
+
+  note.save(false);
+}
+
+TEST_CASE("multipart MIME operations are validated", "[nos][mime]") {
+  auto [db, name] = utils::random_database();
+  const auto note = db->create_note();
+
+  SECTION("boundary without multipart throws") {
+    dmn::omimestream omime{note, "Body"};
+    REQUIRE_THROWS_AS(omime << dmn::boundary, dmn::runtime_error);
+  }
+
+  SECTION("second multipart is rejected") {
+    dmn::omimestream omime{note, "Body"};
+    omime << dmn::multipart;
+    REQUIRE_THROWS_AS(omime << dmn::multipart, dmn::runtime_error);
+  }
+
+  SECTION("headers cannot be added after body content") {
+    dmn::omimestream omime{note, "Body"};
+    omime << dmn::multipart;
+    omime << dmn::boundary;
+    omime << "Hello world!";
+
+    REQUIRE_THROWS_AS((omime << dmn::header{{"Content-Type", "text/plain"}}), dmn::runtime_error);
+  }
+
+  SECTION("boundary starts a new part") {
+    dmn::omimestream omime{note, "Body"};
+    omime << dmn::multipart;
+    omime << dmn::boundary << "First part";
+
+    REQUIRE_NOTHROW(omime << dmn::boundary);
+    REQUIRE_NOTHROW(omime << dmn::header{{"Content-Type", "text/plain"}});
+    REQUIRE_NOTHROW(omime << "Second part");
+    REQUIRE_NOTHROW(omime.finalize(note));
+  }
 }
 
 TEST_CASE("mime stream preserves whitespace", "[nos][mime]") {
