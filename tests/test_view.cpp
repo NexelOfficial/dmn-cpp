@@ -90,7 +90,7 @@ TEST_CASE("a view can be created through the design API", "[nsf][design]") {
 
   size_t iterated = 0;
   runtime_view->iterate({.key = "Alpha", .count = 1}, [&](auto note, auto columns) {
-    REQUIRE(note.info<dmn::info::note_id>().value != 0);
+    REQUIRE(note.template info<dmn::info::note_id>().value != 0);
     REQUIRE(columns.size() == 4);
     ++iterated;
   });

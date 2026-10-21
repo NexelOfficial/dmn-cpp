@@ -70,6 +70,8 @@ class locker : public detail::cursor {
     auto bytes = std::as_bytes(buffer);
     auto locker = allocate_impl(bytes.size(), own);
     locker.write(bytes);
+
+    // NOLINTNEXTLINE(clang-analyzer-core.StackAddressEscape)
     return locker;
   }
 
