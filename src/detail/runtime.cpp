@@ -1,5 +1,7 @@
 #include "dmn/detail/runtime.hpp"
 
+#include <cstring>
+
 #include <domino/global.h>
 #include <domino/kfm.h>
 
