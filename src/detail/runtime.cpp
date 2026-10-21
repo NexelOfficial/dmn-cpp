@@ -31,8 +31,10 @@ thread::thread() {
 thread::~thread() { NotesTermThread(); }
 
 auto runtime::get_username() -> std::string {
+  session::instance();
+
   dmn::lmbcs name;
-  name.resize(MAXUSERNAME);
+  name.resize(MAXUSERNAME + 1);
 
   const dmn::status result = SECKFMGetUserName(name.data());
   result.throw_if_error("Failed to determine username");
