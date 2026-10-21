@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace dmn::detail {
 struct session {
  public:
@@ -28,6 +30,8 @@ struct thread {
 class runtime {
  public:
   auto operator==(const runtime&) const noexcept -> bool = default;
+
+  static auto get_username() -> std::string;
 
  protected:
   runtime() { session::instance(); }

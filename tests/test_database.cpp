@@ -1,9 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <iostream>
 #include <string>
 
 #include "dmn/database.hpp"
+#include "dmn/detail/runtime.hpp"
 #include "dmn/note.hpp"
 #include "dmn/dql.hpp"
 #include "utils.hpp"
@@ -93,4 +95,11 @@ TEST_CASE("a persisted note can be found with DQL", "[nsf][database]") {
   REQUIRE(std::ranges::any_of(results, [&](const dmn::note& item) {
     return item.info<dmn::info::note_id>() == noteid;
   }));
+}
+
+TEST_CASE("username is a valid string", "[kfm][session]") {
+  const auto username = dmn::detail::runtime::get_username();
+  REQUIRE_FALSE(username.empty());
+  REQUIRE(username.starts_with("CN="));
+  REQUIRE(username.at(username.size() - 1) != '\0');
 }
