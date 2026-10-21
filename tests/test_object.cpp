@@ -1,8 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "dmn/value.hpp"
 #include "dmn/error.hpp"
@@ -10,6 +12,33 @@
 #include "dmn/type.hpp"
 #include "dmn/note.hpp"
 #include "utils.hpp"
+
+TEST_CASE("text lists support mutation and iteration", "[nos][list]") {
+  dmn::list values;
+  REQUIRE(values.empty());
+  REQUIRE(values.size() == 0);
+  REQUIRE(values.begin() == values.end());
+  REQUIRE(values.cbegin() == values.cend());
+  REQUIRE_THROWS_AS(values.pop_back(), dmn::out_of_range);
+  REQUIRE_THROWS_AS(values.erase(0), dmn::out_of_range);
+
+  values.push_back("alpha");
+  values.push_back("beta");
+  values.push_back("gamma");
+  REQUIRE_FALSE(values.empty());
+  REQUIRE(values.buffer_size() > 0);
+  REQUIRE(std::ranges::equal(values, std::vector<std::string>{"alpha", "beta", "gamma"}));
+
+  values.erase(1);
+  REQUIRE(std::ranges::equal(values, std::vector<std::string>{"alpha", "gamma"}));
+  values.pop_back();
+  REQUIRE(values.size() == 1);
+  REQUIRE(values.at(0) == "alpha");
+
+  values.clear();
+  REQUIRE(values.empty());
+  REQUIRE_THROWS_AS(values.at(0), dmn::out_of_range);
+}
 
 TEST_CASE("object conversion coverage", "[nos][object]") {
   auto [db, _] = utils::random_database();

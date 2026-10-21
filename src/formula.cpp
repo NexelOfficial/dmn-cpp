@@ -35,7 +35,7 @@ auto formula::decompile(bool is_selection_formula) const -> std::string {
   detail::dhandle_t text_hdl{};
   uint16_t text_len = 0;
 
-  const detail::locker input(get_handle(), size());
+  const auto input = get_cursor();
   const dmn::status result = NSFFormulaDecompile(
     input.get_pointer<char>(), is_selection_formula ? TRUE : FALSE, &text_hdl, &text_len
   );
@@ -48,7 +48,8 @@ auto formula::decompile(bool is_selection_formula) const -> std::string {
 
 auto formula::size(bool even) const -> size_t {
   uint16_t size = 0;
-  NSFFormulaGetSize(get_handle(), &size);
+  const dmn::status result = NSFFormulaGetSize(get_handle(), &size);
+  result.throw_if_error("Failed to get formula size");
   return size + (even ? size % 2 : 0);
 }
 

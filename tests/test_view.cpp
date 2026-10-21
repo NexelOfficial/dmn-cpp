@@ -29,12 +29,17 @@ TEST_CASE("a view can be created through the design API", "[nsf][design]") {
   );
 
   auto design_view = design::view::create(*db, view_name);
-  design_view.column("Subject")
+  auto& subject_column = design_view.column("Subject");
+  subject_column
     .set_title("Document Subject")
     .set_formula(dmn::formula{"Subject"})
     .set_header_font(font_c)
     .set_item_font(font_b)
     .set_sorting(design::column::sorting::descending, true);
+  REQUIRE(
+    subject_column.get_sorting() ==
+    std::pair{design::column::sorting::descending, true}
+  );
 
   design_view.column("#")
     .set_formula(dmn::formula{"@Text(@DocNumber)"})
@@ -72,9 +77,24 @@ TEST_CASE("a view can be created through the design API", "[nsf][design]") {
 
   auto runtime_view = db->get_view(view_name);
   REQUIRE(runtime_view.has_value());
+  REQUIRE(runtime_view->get_handle());
+
+  const auto all_entries = runtime_view->get_entries();
+  REQUIRE(all_entries.size() == values.size());
 
   auto entries = runtime_view->get_entries({.key = "Alpha"});
   REQUIRE(entries.size() == 2);
+
+  const auto limited = runtime_view->get_entries({.key = "Alpha", .count = 1, .offset = 1});
+  REQUIRE(limited.size() == 1);
+
+  size_t iterated = 0;
+  runtime_view->iterate({.key = "Alpha", .count = 1}, [&](auto note, auto columns) {
+    REQUIRE(note.info<dmn::info::note_id>().value != 0);
+    REQUIRE(columns.size() == 4);
+    ++iterated;
+  });
+  REQUIRE(iterated == 1);
 
   for (const auto& entry : entries) {
     REQUIRE(entry.columns.size() == 4);

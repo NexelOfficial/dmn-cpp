@@ -71,20 +71,3 @@ void role_map::set(size_t key, const role& value) {
     ACLSetPrivName(mgr_.get_handle(), key + ACL_BITPRIVCOUNT, converted.data());
   result.throw_if_error("Failed to set role in ACL");
 }
-
-void role_map::erase(size_t key) {
-  if (key >= capacity()) {
-    throw dmn::out_of_range("Index is outside the role list");
-  }
-
-  const dmn::status result = ACLSetPrivName(mgr_.get_handle(), key + ACL_BITPRIVCOUNT, nullptr);
-  result.throw_if_error("Failed to remove role from ACL");
-}
-
-void role_map::clear() {
-  for (size_t index = 0; index < capacity(); ++index) {
-    if (try_at(index)) {
-      erase(index);
-    }
-  }
-}

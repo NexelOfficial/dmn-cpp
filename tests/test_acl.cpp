@@ -87,9 +87,28 @@ TEST_CASE("ACL manager persists entries, roles, and policy explicitly", "[acl][n
   auto [db, _] = utils::random_database();
   auto control = db->create_acl();
   auto roles = control.roles();
-  roles.insert(acl::role{"Approver"});
 
-  const auto entry_access = acl::access{acl::level::author, acl::role{"[Approver]"}};
+  REQUIRE(roles.empty());
+  REQUIRE(roles.capacity() > 1);
+  roles.insert(acl::role{"Approver"});
+  roles.insert(acl::role{"[Temporary]"});
+  REQUIRE(roles.size() == 2);
+  REQUIRE(roles.at(1).name() == "Temporary");
+  REQUIRE(roles.try_at(roles.capacity()) == std::nullopt);
+  REQUIRE(roles.try_at(roles.capacity() - 1) == std::nullopt);
+  roles.set(1, acl::role{"Reviewer"});
+  REQUIRE(roles.at(1) == acl::role{"[Reviewer]"});
+  REQUIRE(std::ranges::distance(roles) == 2);
+
+  auto entry_access = acl::access{
+    acl::level::author,
+    acl::flag::no_delete,
+    acl::role{"[Approver]"},
+    acl::role{"Approver"},
+  };
+  REQUIRE(entry_access.has_flag(acl::flag::no_delete));
+  REQUIRE(entry_access.has_role(acl::role{"Approver"}));
+  REQUIRE(entry_access.roles.size() == 1);
   auto added =
     control.add_entry("CN=ACL Test User/O=dmn", entry_access, acl::principal_type::person);
 
@@ -104,8 +123,24 @@ TEST_CASE("ACL manager persists entries, roles, and policy explicitly", "[acl][n
   REQUIRE(in_memory->get_access() == entry_access);
   REQUIRE(in_memory->get_type() == acl::principal_type::person);
   REQUIRE(roles.at(0) == acl::role{"Approver"});
-  REQUIRE(roles.size() == 1);
+  REQUIRE(roles.size() == 2);
   REQUIRE(!control.admin_server().empty());
+  const auto admin_server = control.admin_server();
+  control.set_admin_server(admin_server);
+  REQUIRE(control.admin_server() == admin_server);
+
+  REQUIRE_FALSE(control.get_entry("CN=Missing/O=dmn").has_value());
+  auto simple = control.add_entry("CN=Simple ACL User/O=dmn", acl::level::reader);
+  simple.set_level(acl::level::editor)
+    .set_type(acl::principal_type::group)
+    .set_administration_server(true);
+  const auto simple_stored = control.get_entry(simple.get_name());
+  REQUIRE(simple_stored.has_value());
+  REQUIRE(simple_stored->get_level() == acl::level::editor);
+  REQUIRE(simple_stored->get_type() == acl::principal_type::group);
+  REQUIRE(simple_stored->is_administration_server());
+  REQUIRE_NOTHROW(simple.remove());
+
   REQUIRE_NOTHROW(control.save());
 
   auto stored = db->get_acl();

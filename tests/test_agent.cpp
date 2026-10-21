@@ -35,14 +35,15 @@ End Sub
 namespace {
 auto setup_modify_agent(const dmn::database& db) -> design::agent {
   const std::string title = "Agent_" + utils::random_small_string();
+  const std::string comment = "Agent test comment";
   auto design_agent = design::agent::create(db, title);
-  design_agent.set_trigger(design::trigger::docupdate);
+  design_agent.set_title(title).set_comment(comment).set_trigger(design::trigger::docupdate);
 
   REQUIRE(design_agent.get_title() == title);
-  REQUIRE(design_agent.get_comment().empty());
+  REQUIRE(design_agent.get_comment() == comment);
   REQUIRE_NOTHROW(design_agent.save());
 
-  utils::run_threaded([&]() {
+  utils::run_threaded([&] {
     REQUIRE_NOTHROW(design_agent.save());
     REQUIRE_FALSE(design_agent.get_title().empty());
   });
@@ -84,6 +85,10 @@ TEST_CASE("Formula agent can be created and ran", "[nsf]") {
   auto design_agent = setup_modify_agent(*db);
 
   auto code = dmn::formula{FORMULA_CODE};
+  REQUIRE(code.get_handle());
+  REQUIRE(code.size() > 0);
+  REQUIRE(code.size(true) % 2 == 0);
+  REQUIRE(code.decompile().find("Subject") != std::string::npos);
   design_agent.set_code(std::move(code));
   REQUIRE_NOTHROW(design_agent.save());
 
@@ -95,6 +100,8 @@ TEST_CASE("LotusScript agent can be created and ran", "[nsf]") {
   auto design_agent = setup_modify_agent(*db);
 
   auto code = dmn::lotusscript{LOTUSSCRIPT_CODE};
+  REQUIRE(code.get_handle());
+  REQUIRE(code.size() > 0);
   design_agent.set_code(std::move(code));
   REQUIRE_NOTHROW(design_agent.save());
 

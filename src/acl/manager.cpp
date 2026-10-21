@@ -213,7 +213,7 @@ void manager::update_entry(std::string_view name, const dmn::acl::entry& value) 
   result.throw_if_error("Failed to update ACL entry");
 }
 
-auto manager::roles() const -> dmn::acl::role_map { return {*this}; }
+auto manager::roles() const -> dmn::acl::role_map { return dmn::acl::role_map{*this}; }
 
 auto manager::admin_server() const -> std::string {
   dmn::lmbcs admin_server;
