@@ -19,7 +19,7 @@ auto names::from_username(std::string_view name) -> names {
   auto converted = dmn::lmbcs::from_string(name);
   const dmn::status result = NSFBuildNamesList(converted.data(), 0, &handle);
   result.throw_if_error("Failed to build names list");
-  return {handle};
+  return names{handle};
 }
 
 void names::set_authentication(authentication_state state) const {
@@ -41,9 +41,9 @@ void names::set_authentication(authentication_state state) const {
   }
 }
 
-auto names::get_name(size_t index) const -> std::optional<std::string> {
-  if (index >= get_count()) {
-    return std::nullopt;
+auto names::at(size_t index) const -> std::string {
+  if (index >= size()) {
+    throw dmn::out_of_range("Index is out of range");
   }
 
   const auto lock = get_cursor();
@@ -53,7 +53,7 @@ auto names::get_name(size_t index) const -> std::optional<std::string> {
   for (size_t i = 0; i < index; ++i) {
     const auto nul = current.find(dmn::lmbcs::char_t{});
     if (nul == dmn::lmbcs_view::npos) {
-      return std::nullopt;
+      throw dmn::runtime_error("Names list is malformed");
     }
 
     current = current.substr(nul + 1);
@@ -61,13 +61,21 @@ auto names::get_name(size_t index) const -> std::optional<std::string> {
 
   const auto nul = current.find(dmn::lmbcs::char_t{});
   if (nul == dmn::lmbcs_view::npos) {
-    return std::nullopt;
+    throw dmn::runtime_error("Names list is malformed");
   }
 
   return lmbcs_view(current.substr(0, nul)).to_string();
 }
 
-auto names::get_count() const -> size_t {
+auto names::try_at(size_t index) const -> std::optional<std::string> {
+  try {
+    return at(index);
+  } catch (const dmn::out_of_range&) {
+    return std::nullopt;
+  }
+}
+
+auto names::size() const -> size_t {
   const auto lock = get_cursor();
   return lock.get_pointer<NAMES_LIST>()->NumNames;
 }

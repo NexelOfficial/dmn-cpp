@@ -22,8 +22,15 @@ struct object_value;
 /// \throws dmn::out_of_range If an operation exceeds the list's bounds or capacity.
 class list : protected detail::runtime {
  public:
+  using value_type = std::string;
+
   class const_iterator {
    public:
+    using value_type = list::value_type;
+    using difference_type = std::ptrdiff_t;
+    using iterator_concept = std::input_iterator_tag;
+    using iterator_category = std::input_iterator_tag;
+
     const_iterator() = default;
     const_iterator(const list* owner, size_t index) : owner_(owner), index_(index) {}
 

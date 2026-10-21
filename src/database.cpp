@@ -76,7 +76,7 @@ auto database::get_acl() const -> dmn::acl::manager { return dmn::acl::manager::
 auto database::create_acl() const -> dmn::acl::manager { return dmn::acl::manager::create(*this); }
 
 auto database::get_access(const dmn::acl::names& names) const -> dmn::acl::access {
-  if (names.get_count() == 0) {
+  if (names.size() == 0) {
     throw dmn::invalid_argument("Names list is empty");
   }
 

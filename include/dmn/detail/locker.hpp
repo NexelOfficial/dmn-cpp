@@ -85,8 +85,11 @@ class locker : public detail::cursor {
     return allocate_impl(size, own);
   }
 
+  /// Clone the contents of this locker into a new locker.
+  [[nodiscard]] auto clone() const -> locker;
+
   /// Get the ownership of the locker.
-  [[nodiscard]] auto get_ownership() -> ownership { return own_; }
+  [[nodiscard]] auto get_ownership() const -> ownership { return own_; }
 
   /// Release the block id (or handle) under the locker.
   ///
