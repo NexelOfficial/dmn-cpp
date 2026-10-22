@@ -7,34 +7,30 @@
 
 #include <cstring>
 
-#include "dmn/messaging/mime.hpp"
 #include "dmn/lmbcs.hpp"
 #include "dmn/error.hpp"
+#include "dmn/messaging/mime.hpp"
 
 using dmn::mail;
 
-mail::mail() : file_hdl_(MailCloseMessageFile), msg_hdl_(MailCloseMessage) {}
-
-auto mail::create(std::optional<std::string_view> mailbox) -> mail {
-  // Open the mail message
-  mail new_mail = {};
+mail::mail(std::optional<std::string_view> mailbox)
+    : file_hdl_(MailCloseMessageFile), msg_hdl_(MailCloseMessage) {
   auto converted = mailbox ? dmn::lmbcs::from_string(*mailbox) : dmn::lmbcs{};
-  dmn::status result = MailOpenMessageFile(converted.data(), new_mail.file_hdl_.data());
+
+  dmn::status result = MailOpenMessageFile(converted.data(), file_hdl_.data());
   result.throw_if_error("Failed to open message file");
 
-  // Create the actual mail
-  result = MailCreateMessage(new_mail.file_hdl_.get(), new_mail.msg_hdl_.data());
+  result = MailCreateMessage(file_hdl_.get(), msg_hdl_.data());
   result.throw_if_error("Failed to create message");
 
-  return new_mail;
+  body_.emplace(*this, MAIL_BODY_ITEM);
+  *body_ << dmn::header{{"Content-Type", "text/html; charset=UTF-8"}}
+         << dmn::header{{"Content-Transfer-Encoding", "8bit"}};
 }
 
-void mail::set_body(std::string body, std::string content_type) const {
-  dmn::mime::open(*this)
-    .set_content_type(std::move(content_type))
-    .set_charset("UTF-8")
-    .append_content(std::move(body))
-    .write_to(*this, MAIL_BODY_ITEM);
+auto mail::operator<<(std::string_view buffer) -> mail& {
+  body_.value() << buffer;
+  return *this;
 }
 
 void mail::add_send_to(std::string_view email) { add_to_list(send_to_, email); }
@@ -58,7 +54,7 @@ void mail::send(std::string_view from, std::string_view subject) {
   recipients_.release();
 
   // Add all lists (SendTo, CopyTo, BlindCopyTo)
-  auto add_list = [&](uint8_t item_num, dmn::list& list) {
+  const auto add_list = [&](uint8_t item_num, dmn::list& list) {
     if (list.empty()) {
       return;
     }
@@ -79,11 +75,12 @@ void mail::send(std::string_view from, std::string_view subject) {
   add_header_item(MAIL_FROM_ITEM_NUM, from.data(), from.size());
   add_header_item(MAIL_SUBJECT_ITEM_NUM, subject.data(), subject.size());
 
-  TIMEDATE now = {};
+  TIMEDATE now{};
   OSCurrentTIMEDATE(&now);
   add_header_item(MAIL_COMPOSEDDATE_ITEM_NUM, &now, sizeof(TIMEDATE));
   add_header_item(MAIL_POSTEDDATE_ITEM_NUM, &now, sizeof(TIMEDATE));
 
+  body_.value().finalize(*this);
   result = MailTransferMessageLocal(msg_hdl_.get());
   result.throw_if_error("Failed to transfer mail");
 }

@@ -20,7 +20,7 @@
 #include "dmn/unid.hpp"
 
 namespace dmn {
-class strlist;
+class mail;
 
 /// Domino note and its items.
 ///
@@ -145,7 +145,7 @@ class note : protected detail::runtime {
       return value.try_as<T>();
     } else if constexpr (std::is_same_v<T, dmn::item_value>) {
       return dmn::item_value{*this, key};
-    } 
+    }
     return std::nullopt;
   }
 
@@ -207,7 +207,8 @@ class note : protected detail::runtime {
   template <dmn::info>
   static constexpr bool always_false_info = false;
 
-  friend class database;
-  friend class view;
+  friend class dmn::database;
+  friend class dmn::view;
+  friend class dmn::mail;
 };
 }  // namespace dmn

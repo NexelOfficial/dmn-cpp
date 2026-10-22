@@ -8,6 +8,7 @@
 #include <limits>
 
 #include "dmn/detail/locker.hpp"
+#include "dmn/detail/scoped_handle.hpp"
 #include "dmn/lmbcs.hpp"
 #include "dmn/error.hpp"
 
@@ -16,11 +17,13 @@ using dmn::list;
 constexpr uint16_t MAX_UINT16 = std::numeric_limits<uint16_t>::max();
 
 list::list() : hdl_(OSMemFree) {
-  const dmn::status result = ListAllocate(0, 0, TRUE, hdl_.data(), nullptr, &size_);
+  detail::dhandle_t handle{};
+  const dmn::status result = ListAllocate(0, 0, TRUE, &handle, nullptr, &size_);
   result.throw_if_error("Failed to allocate list");
-  auto hdl = hdl_.try_get();
-  if (hdl) {
-    OSUnlock(*hdl);
+
+  hdl_.put(handle);
+  if (handle != detail::dhandle_t{}) {
+    OSUnlock(handle);
   }
 }
 
@@ -30,12 +33,13 @@ list::list(std::span<std::byte> buffer) : hdl_(OSMemFree) {
     throw dmn::invalid_argument("Provided pointer is not a text list");
   }
 
-  const dmn::status result =
-    ListDuplicate(reinterpret_cast<LIST*>(buffer.data()), TRUE, hdl_.data());
+  detail::dhandle_t handle{};
+  const dmn::status result = ListDuplicate(reinterpret_cast<LIST*>(buffer.data()), TRUE, &handle);
   result.throw_if_error("Failed to duplicate list");
-  auto hdl = hdl_.try_get();
-  if (hdl) {
-    OSUnlock(*hdl);
+
+  hdl_.put(handle);
+  if (handle != detail::dhandle_t{}) {
+    OSUnlock(handle);
   }
 }
 

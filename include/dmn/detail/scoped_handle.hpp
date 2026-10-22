@@ -68,7 +68,7 @@ class scoped_handle {
     return *this;
   }
 
-  constexpr operator bool() const noexcept { return hdl_ != null_value(); }
+  explicit constexpr operator bool() const noexcept { return hdl_ != null_value(); }
 
   /// Release the managed handle.
   ///
@@ -141,9 +141,9 @@ class scoped_handle {
   }
 
   void reset_unchecked() noexcept {
-    if (cleanup != nullptr && hdl_ != null_value()) {
-      cleanup(hdl_);
-      hdl_ = null_value();
+    auto old = std::exchange(hdl_, T{});
+    if (old != T{} && cleanup) {
+      cleanup(old);
     }
   }
 

@@ -12,7 +12,6 @@
 
 #include "dmn/detail/runtime.hpp"
 
-using dmn::mime_error;
 using dmn::native_error;
 using dmn::status;
 
@@ -36,17 +35,6 @@ auto status::is_error() const noexcept -> bool { return value != NOERROR; }
 void status::throw_if_error(const char* message) const {
   if (is_error()) {
     throw dmn::native_error(message, *this);
-  }
-}
-
-auto mime_error::make(const char* message, int code) -> dmn::mime_error {
-  switch (code) {
-    case MIME_STREAM_IO:
-      return dmn::mime_io_error{message};
-    case MIME_STREAM_EOS:
-      return dmn::mime_eos_error{message};
-    default:
-      return dmn::mime_error{message};
   }
 }
 
