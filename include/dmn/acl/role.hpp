@@ -108,19 +108,13 @@ class role_map : private detail::runtime {
   /// Set/replace the role at a slot.
   void set(size_t key, const acl::role& value);
 
-  /// Remove the role at a slot.
-  void erase(size_t key);
-
-  /// Remove every role.
-  void clear();
-
   [[nodiscard]] auto begin() const -> const_iterator { return const_iterator{this, 0}; }
   [[nodiscard]] auto end() const -> const_iterator { return const_iterator{this, capacity()}; }
 
  private:
   acl::manager mgr_;
 
-  role_map(acl::manager mgr) : mgr_(std::move(mgr)) {};
+  explicit role_map(acl::manager mgr) : mgr_(std::move(mgr)) {};
 
   friend class dmn::acl::manager;
 };

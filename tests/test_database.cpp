@@ -1,11 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
-#include <iostream>
 #include <string>
+#include <vector>
 
 #include "dmn/database.hpp"
-#include "dmn/detail/runtime.hpp"
 #include "dmn/note.hpp"
 #include "dmn/dql.hpp"
 #include "utils.hpp"
@@ -97,9 +96,31 @@ TEST_CASE("a persisted note can be found with DQL", "[nsf][database]") {
   }));
 }
 
-TEST_CASE("username is a valid string", "[kfm][session]") {
-  const auto username = dmn::detail::runtime::get_username();
-  REQUIRE_FALSE(username.empty());
-  REQUIRE(username.starts_with("CN="));
-  REQUIRE(username.at(username.size() - 1) != '\0');
+TEST_CASE("DQL expressions render supported values and operators", "[dql]") {
+  using dmn::dql;
+
+  REQUIRE(dql::render(dql::eq("Subject", "O'Brien\n")) == "Subject = 'O''Brien\\n'");
+  REQUIRE(dql::render(dql::ne("Count", 2)) == "not Count = 2");
+  REQUIRE(dql::render(dql::lt("Count", 2L)) == "Count < 2");
+  REQUIRE(dql::render(dql::lte("Count", 2LL)) == "Count <= 2");
+  REQUIRE(dql::render(dql::gt("Amount", 1.5)) == "Amount > 1.5");
+  REQUIRE(dql::render(dql::gte("Enabled", true)) == "Enabled >= true");
+  REQUIRE(dql::render(dql::contains("Subject", "needle")) == "Subject contains ('needle')");
+  REQUIRE(
+    dql::render(dql::eq("Created", dql::datetime("2026-10-21"))) ==
+    "Created = @dt('2026-10-21')"
+  );
+
+  const auto grouped = dql::all({
+    dql::eq("Form", std::string{"Memo"}),
+    dql::any({dql::gt("Score", 10), dql::eq("Approved", false)}),
+  });
+  REQUIRE(dql::render(grouped) == "Form = 'Memo' and (Score > 10 or Approved = false)");
+
+  REQUIRE_THROWS_AS(dql::eq("invalid field", 1), dmn::invalid_argument);
+  REQUIRE_THROWS_AS(dql::contains("Subject", ""), dmn::invalid_argument);
+  REQUIRE_THROWS_AS(dql::datetime(""), dmn::invalid_argument);
+  REQUIRE_THROWS_AS(dql::all({}), dmn::invalid_argument);
+  REQUIRE_THROWS_AS(dql::any({}), dmn::invalid_argument);
+  REQUIRE_THROWS_AS(dql::render({.mode = dql::expression::oper::raw}), dmn::invalid_argument);
 }

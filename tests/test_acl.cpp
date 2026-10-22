@@ -1,24 +1,114 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <array>
+#include <ranges>
 #include <string>
+#include <vector>
 
 #include "dmn/acl/access.hpp"
 #include "dmn/acl/entry.hpp"
 #include "dmn/acl/manager.hpp"
 #include "dmn/acl/names.hpp"
 #include "dmn/database.hpp"
+#include "dmn/error.hpp"
 #include "utils.hpp"
 
 namespace acl = dmn::acl;
+
+TEST_CASE("ACL names exposes names, authentication, and handle operations", "[acl][nsf]") {
+  const std::string username = "CN=Names Test User/O=dmn";
+  auto names = acl::names::from_username(username);
+
+  REQUIRE(names.get_handle());
+  REQUIRE(names.size() > 0);
+  REQUIRE(names.at(0) == username);
+  REQUIRE(names.try_at(0) == username);
+  REQUIRE_FALSE(names.try_at(names.size()).has_value());
+  REQUIRE_THROWS_AS(names.at(names.size()), dmn::out_of_range);
+
+  std::vector<std::string> iterated;
+  auto iterator = acl::names::const_iterator{&names, 0};
+  const auto end = acl::names::const_iterator{&names, names.size()};
+  while (iterator != end) {
+    iterated.push_back(*iterator++);
+  }
+
+  REQUIRE(iterated.size() == names.size());
+  for (size_t i = 0; i < names.size(); ++i) {
+    REQUIRE(iterated.at(i) == names.at(i));
+  }
+
+  size_t transformed_count = 0;
+  for (const auto length :
+       names | std::views::filter([](const std::string& name) { return !name.empty(); }) |
+         std::views::transform([](const std::string& name) { return name.size(); })) {
+    REQUIRE(length > 0);
+    ++transformed_count;
+  }
+  REQUIRE(transformed_count == names.size());
+
+  auto prefix = acl::names::const_iterator{&names, 0};
+  REQUIRE(&++prefix == &prefix);
+  if (names.size() > 1) {
+    REQUIRE(*prefix == names.at(1));
+  }
+
+  const std::array authentication_states{
+    acl::authentication_state::unauthenticated,
+    acl::authentication_state::password,
+    acl::authentication_state::notes,
+    acl::authentication_state::admin,
+  };
+  for (const auto state : authentication_states) {
+    REQUIRE_NOTHROW(names.set_authentication(state));
+  }
+
+  auto clone = names.clone();
+  REQUIRE(clone.get_handle());
+  REQUIRE(clone.get_handle() != names.get_handle());
+  REQUIRE(clone.size() == names.size());
+  for (size_t i = 0; i < names.size(); ++i) {
+    REQUIRE(clone.at(i) == names.at(i));
+  }
+
+  const auto released = clone.release();
+  REQUIRE(released);
+  REQUIRE_THROWS_AS(clone.get_handle(), dmn::invalid_handle);
+  const auto released_owner = dmn::detail::locker{released, dmn::detail::ownership::free};
+
+  utils::run_threaded([&] {
+    REQUIRE_THROWS_AS(names.get_handle(), dmn::thread_access_error);
+    REQUIRE_THROWS_AS(names.size(), dmn::thread_access_error);
+  });
+}
 
 TEST_CASE("ACL manager persists entries, roles, and policy explicitly", "[acl][nsf]") {
   auto [db, _] = utils::random_database();
   auto control = db->create_acl();
   auto roles = control.roles();
-  roles.insert(acl::role{"Approver"});
 
-  const auto entry_access = acl::access{acl::level::author, acl::role{"[Approver]"}};
+  REQUIRE(roles.empty());
+  REQUIRE(roles.capacity() > 1);
+  roles.insert(acl::role{"Approver"});
+  roles.insert(acl::role{"[Temporary]"});
+  REQUIRE(roles.size() == 2);
+  REQUIRE(roles.at(1).name() == "Temporary");
+  REQUIRE(roles.try_at(roles.capacity()) == std::nullopt);
+  REQUIRE(roles.try_at(roles.capacity() - 1) == std::nullopt);
+  roles.set(1, acl::role{"Reviewer"});
+  REQUIRE(roles.at(1) == acl::role{"[Reviewer]"});
+  REQUIRE(std::ranges::distance(roles) == 2);
+
+  auto entry_access = acl::access{
+    acl::level::author,
+    acl::flag::no_delete,
+    acl::role{"[Approver]"},
+    acl::role{"Approver"},
+  };
+  REQUIRE(entry_access.has_flag(acl::flag::no_delete));
+  REQUIRE(entry_access.has_role(acl::role{"Approver"}));
+  REQUIRE(entry_access.roles.size() == 1);
   auto added =
     control.add_entry("CN=ACL Test User/O=dmn", entry_access, acl::principal_type::person);
 
@@ -33,8 +123,24 @@ TEST_CASE("ACL manager persists entries, roles, and policy explicitly", "[acl][n
   REQUIRE(in_memory->get_access() == entry_access);
   REQUIRE(in_memory->get_type() == acl::principal_type::person);
   REQUIRE(roles.at(0) == acl::role{"Approver"});
-  REQUIRE(roles.size() == 1);
+  REQUIRE(roles.size() == 2);
   REQUIRE(!control.admin_server().empty());
+  const auto admin_server = control.admin_server();
+  control.set_admin_server(admin_server);
+  REQUIRE(control.admin_server() == admin_server);
+
+  REQUIRE_FALSE(control.get_entry("CN=Missing/O=dmn").has_value());
+  auto simple = control.add_entry("CN=Simple ACL User/O=dmn", acl::level::reader);
+  simple.set_level(acl::level::editor)
+    .set_type(acl::principal_type::group)
+    .set_administration_server(true);
+  const auto simple_stored = control.get_entry(simple.get_name());
+  REQUIRE(simple_stored.has_value());
+  REQUIRE(simple_stored->get_level() == acl::level::editor);
+  REQUIRE(simple_stored->get_type() == acl::principal_type::group);
+  REQUIRE(simple_stored->is_administration_server());
+  REQUIRE_NOTHROW(simple.remove());
+
   REQUIRE_NOTHROW(control.save());
 
   auto stored = db->get_acl();
@@ -58,7 +164,7 @@ TEST_CASE("ACL manager persists entries, roles, and policy explicitly", "[acl][n
   REQUIRE(db_with_access.has_value());
   REQUIRE(db_with_access->get_path() == db->get_path());
 
-  utils::run_threaded([&]() {
+  utils::run_threaded([&] {
     REQUIRE_THROWS_AS(db_with_access->get_handle(), dmn::thread_access_error);
     REQUIRE_THROWS_AS(control.get_handle(), dmn::thread_access_error);
     REQUIRE_THROWS_AS(names.get_handle(), dmn::thread_access_error);

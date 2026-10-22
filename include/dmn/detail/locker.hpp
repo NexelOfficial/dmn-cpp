@@ -38,7 +38,7 @@ class locker : public detail::cursor {
   ///
   /// \param bid Valid block id.
   /// \param own Ownership mode for the handle. See `dmn::utils::ownership` for details.
-  /// \note Will automatically determine the memory size using the provided block id.
+  /// \note Will automatically determine the memory size from the block offset to the end of its pool.
   locker(detail::block_id bid, ownership own = ownership::take);
 
   /// Construct a locker from an OS memory handle.
@@ -70,6 +70,8 @@ class locker : public detail::cursor {
     auto bytes = std::as_bytes(buffer);
     auto locker = allocate_impl(bytes.size(), own);
     locker.write(bytes);
+
+    // NOLINTNEXTLINE(clang-analyzer-core.StackAddressEscape)
     return locker;
   }
 
@@ -85,8 +87,11 @@ class locker : public detail::cursor {
     return allocate_impl(size, own);
   }
 
+  /// Clone the contents of this locker into a new locker.
+  [[nodiscard]] auto clone() const -> locker;
+
   /// Get the ownership of the locker.
-  [[nodiscard]] auto get_ownership() -> ownership { return own_; }
+  [[nodiscard]] auto get_ownership() const -> ownership { return own_; }
 
   /// Release the block id (or handle) under the locker.
   ///

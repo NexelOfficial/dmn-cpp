@@ -20,7 +20,15 @@ locker::locker(detail::block_id bid, ownership own) : locker(bid, 0, own) {
   DWORD names_size = 0;
   const dmn::status result = OSMemGetSize(bid.pool, &names_size);
   result.throw_if_error("Failed to determine size of memory");
-  size_ = names_size;
+
+  if (bid.block > names_size) {
+    throw dmn::invalid_argument("Block offset exceeds memory size");
+  }
+
+  size_ = names_size - bid.block;
+  if (own_ != ownership::free) {
+    reset(get_pointer(), size_);
+  }
 }
 
 locker::locker(detail::dhandle_t hdl, size_t size, ownership own)
@@ -34,8 +42,7 @@ locker::locker(detail::block_id bid, size_t size, ownership own)
         if (own != ownership::free) {
           OSUnlock(bid.pool);
         }
-        OSUnlock(bid.pool);
-        if (own == ownership::take) {
+        if (own != ownership::borrow) {
           OSMemFree(bid.pool);
         }
       }) {
@@ -52,6 +59,11 @@ locker::locker(detail::block_id bid, size_t size, ownership own)
     reset(locked_ptr, size);
   }
   hdl_.put(bid);
+}
+
+auto locker::clone() const -> locker {
+  const auto* ptr = get_pointer(0);
+  return allocate(std::span{ptr, size()}, ownership::take);
 }
 
 auto locker::allocate_impl(size_t size, ownership own) -> locker {
