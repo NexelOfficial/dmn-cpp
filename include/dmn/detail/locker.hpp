@@ -38,7 +38,7 @@ class locker : public detail::cursor {
   ///
   /// \param bid Valid block id.
   /// \param own Ownership mode for the handle. See `dmn::utils::ownership` for details.
-  /// \note Will automatically determine the memory size using the provided block id.
+  /// \note Will automatically determine the memory size from the block offset to the end of its pool.
   locker(detail::block_id bid, ownership own = ownership::take);
 
   /// Construct a locker from an OS memory handle.

@@ -20,8 +20,15 @@ locker::locker(detail::block_id bid, ownership own) : locker(bid, 0, own) {
   DWORD names_size = 0;
   const dmn::status result = OSMemGetSize(bid.pool, &names_size);
   result.throw_if_error("Failed to determine size of memory");
-  size_ = names_size;
-  reset(get_pointer(), size_);
+
+  if (bid.block > names_size) {
+    throw dmn::invalid_argument("Block offset exceeds memory size");
+  }
+
+  size_ = names_size - bid.block;
+  if (own_ != ownership::free) {
+    reset(get_pointer(), size_);
+  }
 }
 
 locker::locker(detail::dhandle_t hdl, size_t size, ownership own)
